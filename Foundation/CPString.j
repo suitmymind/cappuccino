@@ -587,7 +587,12 @@ var CPStringHashes      = new objj_dictionary();
 */
 - (CPArray)pathComponents
 {
-    return split('/');
+    var result = split('/');
+    if (result[0] === "")
+        result[0] = "/";
+    if (result[result.length - 1] === "")
+        result.pop();
+    return result;
 }
 
 /*!
