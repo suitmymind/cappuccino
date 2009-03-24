@@ -28,7 +28,7 @@ FRAMEWORKS="$OBJJ_HOME/lib/Frameworks"
 MAIN="$OBJJ_LIB/$(basename $SELF_PATH)/main.j"
 
 # convert paths for Cygwin
-if [[ `uname` == CYGWIN* ]]; then
+if [ `uname` = CYGWIN* ]; then
     OBJJ_HOME=`cygpath -w "$OBJJ_HOME"`
     BAKE=`cygpath -w "$BLEND"`
 fi
