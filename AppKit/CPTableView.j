@@ -22,12 +22,13 @@
 
 @import "CPControl.j"
 @import "CPTableColumn.j"
+@import "CPTableHeaderView.j"
 
 @import "CPColor.j"
 @import "CPTextField.j"
 
 #define ROW_HEIGHT(aRow) (_hasVariableHeightRows ? _rowHeights[aRow] : _rowHeight)
-#define ROW_MIN_Y(aRow) (_hasVariableHeightRows ? _rowMinYs[aRow] : (aRow * (_rowHeight + _intercellSpacing.height)))
+#define ROW_MIN_Y(aRow) ( _hasVariableHeightRows ? _rowMinYs[aRow] : (aRow * (_rowHeight + _intercellSpacing.height))  )
 
 CPTableViewColumnDidMoveNotification        = "CPTableViewColumnDidMoveNotification";
 CPTableViewColumnDidResizeNotification      = "CPTableViewColumnDidResizeNotification";
@@ -54,7 +55,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
     id                  _dataSource;
     id                  _delegate;
     
-    //CPTableHeaderView   _headerView;
+    CPTableHeaderView   _headerView;
     //CPView              _cornerView;
     
     CPArray             _tableColumns;
@@ -160,6 +161,9 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
     
     _rowHeights = [];
     _rowMinYs = [];
+    
+    _headerView = [[CPTableHeaderView alloc] initWithFrame:CGRectMake(0,0,[self bounds].size.width,_rowHeight+_intercellSpacing.height)];
+    [_headerView setTableView:self];
 }
 
 /*
@@ -689,11 +693,13 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 
 - (void)_recalculateColumnHeight
 {
-    var oldColumnHeight = _columnHeight;
+    var oldColumnHeight = _columnHeight,
+    headerOffset = [_headerView frame].size.height ;
     
     if (_hasVariableHeightRows)
     {
-        _rowMinYs[0] = 0;
+        // _rowMinYs[0] = 0;
+        _rowMinYs[0] = 0 + headerOffset ;
         for (var row = 0; row < _numberOfRows; row++)
         {
             _rowHeights[row] = [_delegate tableView:self heightOfRow:row];
@@ -747,6 +753,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 
 - (void)layoutSubviews
 {
+    [_headerView drawRect:[self visibleRectInParent]] ;
     [self loadTableCellsInRect:[self visibleRectInParent]];
 }
 
@@ -853,7 +860,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 - (int)rowAtPoint:(CGPoint)aPoint
 {
     var index = [self _rowAtY:aPoint.y]
-    
+    // CPLog.warn("point:"+aPoint.y+" index:"+index);
     if (index >= 0 && index < _numberOfRows)
         return index;
     else
@@ -1092,7 +1099,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
         point = [self convertPoint:[anEvent locationInWindow] fromView:nil],
         currentRow = MAX(0, MIN(_numberOfRows-1, [self _rowAtY:point.y]));
     
-    if (type == CPLeftMouseUp)
+    if (type === CPLeftMouseUp)
     {
         _clickedRow = [self rowAtPoint:point];
         _clickedColumn = [self columnAtPoint:point];
@@ -1116,7 +1123,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
         return;
     }
     
-    if (type == CPLeftMouseDown)
+    if (type === CPLeftMouseDown)
     {
         _previousSelectedRowIndexes = _selectedRowIndexes;
         _selectionModifier = [anEvent modifierFlags];
