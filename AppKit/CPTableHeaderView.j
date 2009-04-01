@@ -90,7 +90,6 @@
 
 - (void)drawRect:(CGRect)aRect
 {
-    CPLog.warn("CPTableHeaderView : drawRect") ;
     var tableColumns    = [_tableView tableColumns];
     var count           = [tableColumns count];
     var columnRect      = [self bounds];
@@ -103,7 +102,7 @@
         // [headerView setHighlighted:[_tableView isColumnSelected:[[_tableView tableColumns] indexOfObject:column]]];
         [headerView setFrame:columnRect];
         columnRect.origin.x += [column width] + spacing.width;
-        [_tableView addSubview:headerView] ;
+        [self addSubview:headerView] ;
     }
 }
 

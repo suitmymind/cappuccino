@@ -28,7 +28,7 @@
 @import "CPTextField.j"
 
 #define ROW_HEIGHT(aRow) (_hasVariableHeightRows ? _rowHeights[aRow] : _rowHeight)
-#define ROW_MIN_Y(aRow) ( _hasVariableHeightRows ? _rowMinYs[aRow] : (aRow * (_rowHeight + _intercellSpacing.height))  )
+#define ROW_MIN_Y(aRow) (_hasVariableHeightRows ? _rowMinYs[aRow] : (aRow * (_rowHeight + _intercellSpacing.height)))
 
 CPTableViewColumnDidMoveNotification        = "CPTableViewColumnDidMoveNotification";
 CPTableViewColumnDidResizeNotification      = "CPTableViewColumnDidResizeNotification";
@@ -693,13 +693,11 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 
 - (void)_recalculateColumnHeight
 {
-    var oldColumnHeight = _columnHeight,
-    headerOffset = [_headerView frame].size.height ;
+    var oldColumnHeight = _columnHeight;
     
     if (_hasVariableHeightRows)
     {
-        // _rowMinYs[0] = 0;
-        _rowMinYs[0] = 0 + headerOffset ;
+        _rowMinYs[0] = 0;
         for (var row = 0; row < _numberOfRows; row++)
         {
             _rowHeights[row] = [_delegate tableView:self heightOfRow:row];
@@ -753,7 +751,6 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 
 - (void)layoutSubviews
 {
-    [_headerView drawRect:[self visibleRectInParent]] ;
     [self loadTableCellsInRect:[self visibleRectInParent]];
 }
 
@@ -860,7 +857,7 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 - (int)rowAtPoint:(CGPoint)aPoint
 {
     var index = [self _rowAtY:aPoint.y]
-    // CPLog.warn("point:"+aPoint.y+" index:"+index);
+    
     if (index >= 0 && index < _numberOfRows)
         return index;
     else
@@ -995,6 +992,18 @@ var _CPTableViewWillDisplayCellSelector                         = 1 << 0,
 - (void)editColumn:(int)columnIndex row:(int)rowIndex withEvent:(CPEvent)theEvent select:(BOOL)flag
 {
     
+}
+
+- (CPView)headerView
+{
+    // CPLog.warn("CPTableView > _headerView : " + _headerView.size.height) ;
+    return _headerView ;
+}
+
+- (void)setHeaderView:(CPView)aHeaderView
+{
+    _headerView = aHeaderView ;
+    [_headerView setTableView:self] ;
 }
 
 /*

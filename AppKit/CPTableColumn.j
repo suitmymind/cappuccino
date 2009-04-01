@@ -391,7 +391,7 @@ CPTableColumnUserResizingMask;
     // map the new view's hash to it's data view prototype
     _dataViewForView[[newView hash]] = view;
     
-    CPLog.warn("creating cell: %s", newView);
+    // CPLog.warn("creating cell: %s", newView);
     
     return newView;
 }
