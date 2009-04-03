@@ -353,12 +353,12 @@ CPTextFieldStatePlaceholder = 1 << 13;
     element.style.width = _CGRectGetWidth(contentRect) + "px";
     element.style.height = _CGRectGetHeight(contentRect) + "px";
 
-    _DOMElement.appendChild(element);
+    _DOMElement.appendChild(element);    
 //    [anEvent _DOMEvent].
-    var evt = document.createEvent("MouseEvents");
+    /*var evt = document.createEvent("MouseEvents");
   evt.initMouseEvent("mousedown", true, true, window,
     0, 0, 0, 0, 0, false, false, false, false, 0, null);
-  var canceled = !element.dispatchEvent(evt);/*
+  var canceled = !element.dispatchEvent(evt);
     var evt = document.createEvent("MouseEvents");
   evt.initMouseEvent("mousedown", true, true, window,
     0, 0, 0, 0, 0, false, false, false, false, 0, null);
@@ -373,7 +373,7 @@ CPTextFieldStatePlaceholder = 1 << 13;
     // None of the handlers called preventDefault
     alert("not canceled");
   }*/
-//    window.setTimeout(function() { element.focus(); }, 0.0);
+   window.setTimeout(function() { element.focus(); }, 0.0);
 
     element.onblur = function () 
     { 
@@ -415,6 +415,7 @@ CPTextFieldStatePlaceholder = 1 << 13;
     //inspect keyup to detect changes in order to trigger controlTextDidChange: delegate method
     element.onkeyup = function(aDOMEvent) 
     { 
+        [self setStringValue: this.value];
         //check if we should fire a notification for CPControlTextDidChange
         if ([self stringValue] != _textDidChangeValue)
         {
