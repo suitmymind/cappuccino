@@ -98,6 +98,11 @@ var _CPMenuBarVisible               = NO,
         [_CPMenuBarSharedWindow setColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarBackgroundColor"]];
         [_CPMenuBarSharedWindow setTextColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTextColor"]];
         [_CPMenuBarSharedWindow setTitleColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTitleColor"]];
+        [_CPMenuBarSharedWindow setTextShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTextShadowColor"]];
+        [_CPMenuBarSharedWindow setTitleShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTitleShadowColor"]];
+        [_CPMenuBarSharedWindow setHighlightColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightColor"]];
+        [_CPMenuBarSharedWindow setHighlightTextColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightTextColor"]];
+        [_CPMenuBarSharedWindow setHighlightTextShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightTextShadowColor"]];
         
         [_CPMenuBarSharedWindow orderFront:self];
     }
@@ -140,7 +145,12 @@ var _CPMenuBarVisible               = NO,
     _CPMenuBarAttributes = [attributes copy];
     
     var textColor = [attributes objectForKey:@"CPMenuBarTextColor"],
-        titleColor = [attributes objectForKey:@"CPMenuBarTitleColor"];
+        titleColor = [attributes objectForKey:@"CPMenuBarTitleColor"],
+        textShadowColor = [attributes objectForKey:@"CPMenuBarTextShadowColor"],
+        titleShadowColor = [attributes objectForKey:@"CPMenuBarTitleShadowColor"],
+        highlightColor = [attributes objectForKey:@"CPMenuBarHighlightColor"],
+        highlightTextColor = [attributes objectForKey:@"CPMenuBarHighlightTextColor"],
+        highlightTextShadowColor = [attributes objectForKey:@"CPMenuBarHighlightTextShadowColor"];
     
     if (!textColor && titleColor)
         [_CPMenuBarAttributes setObject:titleColor forKey:@"CPMenuBarTextColor"];
@@ -154,11 +164,37 @@ var _CPMenuBarVisible               = NO,
         [_CPMenuBarAttributes setObject:[CPColor blackColor] forKey:@"CPMenuBarTitleColor"];
     }
     
+    if (!textShadowColor && titleShadowColor)
+        [_CPMenuBarAttributes setObject:titleShadowColor forKey:@"CPMenuBarTextShadowColor"];
+    
+    else if (textShadowColor && !titleShadowColor)
+        [_CPMenuBarAttributes setObject:textShadowColor forKey:@"CPMenuBarTitleShadowColor"];
+    
+    else if (!textShadowColor && !titleShadowColor)
+    {
+        [_CPMenuBarAttributes setObject:[CPColor colorWithWhite:1.0 alpha:0.8] forKey:@"CPMenuBarTextShadowColor"];
+        [_CPMenuBarAttributes setObject:[CPColor colorWithWhite:1.0 alpha:0.8] forKey:@"CPMenuBarTitleShadowColor"];
+    }
+    
+    if (!highlightColor)
+        [_CPMenuBarAttributes setObject:[CPColor colorWithCalibratedRed:81.0 / 255.0 green:83.0 / 255.0 blue:109.0 / 255.0 alpha:1.0] forKey:@"CPMenuBarHighlightColor"];
+    
+    if (!highlightTextColor)
+        [_CPMenuBarAttributes setObject:[CPColor whiteColor] forKey:@"CPMenuBarHighlightTextColor"];
+    
+    if (!highlightTextShadowColor)
+        [_CPMenuBarAttributes setObject:[CPColor blackColor] forKey:@"CPMenuBarHighlightTextShadowColor"];
+    
     if (_CPMenuBarSharedWindow)
     {
         [_CPMenuBarSharedWindow setColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarBackgroundColor"]];
         [_CPMenuBarSharedWindow setTextColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTextColor"]];
         [_CPMenuBarSharedWindow setTitleColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTitleColor"]];
+        [_CPMenuBarSharedWindow setTextShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTextShadowColor"]];
+        [_CPMenuBarSharedWindow setTitleShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarTitleShadowColor"]];
+        [_CPMenuBarSharedWindow setHighlightColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightColor"]];
+        [_CPMenuBarSharedWindow setHighlightTextColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightTextColor"]];
+        [_CPMenuBarSharedWindow setHighlightTextShadowColor:[_CPMenuBarAttributes objectForKey:@"CPMenuBarHighlightTextShadowColor"]];
     }
 }
 
@@ -1380,6 +1416,13 @@ var _CPMenuBarWindowBackgroundColor = nil,
     
     CPColor     _textColor;
     CPColor     _titleColor;
+    
+    CPColor     _textShadowColor;
+    CPColor     _titleShadowColor;
+    
+    CPColor     _highlightColor;
+    CPColor     _highlightTextColor;
+    CPColor     _highlightTextShadowColor;
 }
 
 + (void)initialize
@@ -1419,6 +1462,7 @@ var _CPMenuBarWindowBackgroundColor = nil,
         
         [_titleField setFont:[CPFont boldSystemFontOfSize:12.0]];
         [_titleField setAlignment:CPCenterTextAlignment];
+        [_titleField setTextShadowOffset:CGSizeMake(0, 1)];
         
         [contentView addSubview:_titleField];
     }
@@ -1489,6 +1533,54 @@ var _CPMenuBarWindowBackgroundColor = nil,
     _titleColor = aColor;
     
     [_titleField setTextColor:aColor ? aColor : [CPColor blackColor]];
+}
+
+- (void)setTextShadowColor:(CPColor)aColor
+{
+    if (_textShadowColor == aColor)
+        return;
+    
+    _textShadowColor = aColor;
+    
+    [_menuItemViews makeObjectsPerformSelector:@selector(setTextShadowColor:) withObject:_textShadowColor];
+}
+
+- (void)setTitleShadowColor:(CPColor)aColor
+{
+    if (_titleShadowColor == aColor)
+        return;
+    
+    _titleShadowColor = aColor;
+    
+    [_titleField setTextShadowColor:aColor ? aColor : [CPColor whiteColor]];
+}
+
+- (void)setHighlightColor:(CPColor)aColor
+{
+    if (_highlightColor == aColor)
+        return;
+    
+    _highlightColor = aColor;
+}
+
+- (void)setHighlightTextColor:(CPColor)aColor
+{
+    if (_highlightTextColor == aColor)
+        return;
+    
+    _highlightTextColor = aColor;
+    
+    [_menuItemViews makeObjectsPerformSelector:@selector(setActivateColor:) withObject:_highlightTextColor];
+}
+
+- (void)setHighlightTextShadowColor:(CPColor)aColor
+{
+    if (_highlightTextShadowColor == aColor)
+        return;
+    
+    _highlightTextShadowColor = aColor;
+    
+    [_menuItemViews makeObjectsPerformSelector:@selector(setActivateShadowColor:) withObject:_highlightTextShadowColor];
 }
 
 - (void)setMenu:(CPMenu)aMenu
@@ -1721,7 +1813,7 @@ var _CPMenuBarWindowBackgroundColor = nil,
     {
         _highlightView = [[CPView alloc] initWithFrame:frame];
     
-        [_highlightView setBackgroundColor:[CPColor colorWithCalibratedRed:81.0 / 255.0 green:83.0 / 255.0 blue:109.0 / 255.0 alpha:1.0]];
+        [_highlightView setBackgroundColor:_highlightColor];
     }
     else
         [_highlightView setFrame:frame];
