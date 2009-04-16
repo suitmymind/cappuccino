@@ -257,6 +257,7 @@ var CPWindowSaveImage       = nil,
 
     CPToolbar                   _toolbar;
     CPResponder                 _firstResponder;
+    CPResponder                 _initialFirstResponder;
     id                          _delegate;
 
     CPString                    _title;
@@ -275,6 +276,12 @@ var CPWindowSaveImage       = nil,
     CPSet                       _registeredDraggedTypes;
     CPArray                     _registeredDraggedTypesArray;
     CPCountedSet                _inclusiveRegisteredDraggedTypes;
+
+    CPButton                    _defaultButton;
+    BOOL                        _defaultButtonEnabled;
+
+    BOOL                        _autorecalculatesKeyViewLoop;
+    BOOL                        _keyViewLoopIsDirty;
 
     // Bridge Support
 #if PLATFORM(DOM)
@@ -401,6 +408,9 @@ CPTexturedBackgroundWindowMask
 
         if (aStyleMask & CPBorderlessBridgeWindowMask)
             [self setFullBridge:YES];
+
+        _defaultButtonEnabled = YES;
+        _keyViewLoopIsDirty = YES;
     }
     
     return self;
@@ -423,6 +433,12 @@ CPTexturedBackgroundWindowMask
 + (Class)_windowViewClassForFullBridgeStyleMask:(unsigned)aStyleMask
 {
     return _CPBorderlessBridgeWindowView;
+}
+
+- (void)awakeFromCib
+{
+    if (_initialFirstResponder)
+        [self makeFirstResponder:_initialFirstResponder];
 }
 
 - (void)_setWindowView:(CPView)aWindowView
@@ -1692,7 +1708,158 @@ CPTexturedBackgroundWindowMask
     return NO;
 }
 
+- (void)keyDown:(CPEvent)event
+{
+    if (![self performKeyEquivalent:event])
+        [self interpretKeyEvents:[event]];
+}
+
+- (void)insertNewline:(id)sender
+{
+    if (_defaultButton && _defaultButtonEnabled)
+        [_defaultButton performClick:nil];
+}
+
+- (void)insertTab:(id)sender
+{
+    [self selectNextKeyView:nil];
+}
+
+- (void)_dirtyKeyViewLoop
+{
+    if (_autorecalculatesKeyViewLoop)
+        _keyViewLoopIsDirty = YES;
+}
+
+- (void)recalculateKeyViewLoop
+{
+    var subviews = [];
+    
+    [self _appendSubviewsOf:_contentView toArray:subviews];
+
+    var keyViewOrder = [subviews sortedArrayUsingFunction:keyViewComparator context:_contentView],
+        count = [keyViewOrder count];
+
+    for (var i=0; i<count; i++)
+        [keyViewOrder[i] setNextKeyView:keyViewOrder[(i+1)%count]];
+    
+    _keyViewLoopIsDirty = NO;
+}
+
+- (void)_appendSubviewsOf:(CPView)aView toArray:(CPArray)anArray
+{
+    var subviews = [aView subviews],
+        count = [subviews count];
+
+    while (count--)
+        [self _appendSubviewsOf:subviews[count] toArray:anArray];
+
+    [anArray addObject:aView];
+}
+
+- (void)setAutorecalculatesKeyViewLoop:(BOOL)shouldRecalculate
+{
+    if (_autorecalculatesKeyViewLoop === shouldRecalculate)
+        return;
+
+    _autorecalculatesKeyViewLoop = shouldRecalculate;
+    
+    [self _dirtyKeyViewLoop];
+}
+
+- (BOOL)autorecalculatesKeyViewLoop
+{
+    return _autorecalculatesKeyViewLoop;
+}
+
+- (void)selectNextKeyView:(id)sender
+{
+    if ([_firstResponder isKindOfClass:[CPView class]])
+        [self selectKeyViewFollowingView:_firstResponder];
+}
+
+- (void)selectPreviousKeyView:(id)sender
+{
+    if ([_firstResponder isKindOfClass:[CPView class]])
+        [self selectKeyViewPrecedingView:_firstResponder];
+}
+
+- (void)selectKeyViewFollowingView:(CPView)aView
+{
+    if (_keyViewLoopIsDirty)
+        [self recalculateKeyViewLoop];
+
+    [self makeFirstResponder:[aView nextValidKeyView]];
+}
+
+- (void)selectKeyViewPrecedingView:(CPView)aView
+{
+    if (_keyViewLoopIsDirty)
+        [self recalculateKeyViewLoop];
+
+    [self makeFirstResponder:[aView previousValidKeyView]];
+}
+
+- (void)setDefaultButtonCell:(CPButton)aButton
+{
+    [self setDefaultButton:aButton];
+}
+
+- (CPButton)defaultButtonCell
+{
+    return [self defaultButton];
+}
+
+- (void)setDefaultButton:(CPButton)aButton
+{
+    [_defaultButton setDefaultButton:NO];
+
+    _defaultButton = aButton;
+
+    [_defaultButton setDefaultButton:YES];    
+}
+
+- (CPButton)defaultButton
+{
+    return _defaultButton;
+}
+
+- (void)enableKeyEquivalentForDefaultButton
+{
+    _defaultButtonEnabled = YES;
+}
+
+- (void)enableKeyEquivalentForDefaultButtonCell
+{
+    [self enableKeyEquivalentForDefaultButton];
+}
+
+- (void)disableKeyEquivalentForDefaultButton
+{
+    _defaultButtonEnabled = NO;
+}
+
+- (void)disableKeyEquivalentForDefaultButtonCell
+{
+    [self disableKeyEquivalentForDefaultButton];
+}
+
 @end
+
+var keyViewComparator = function(a, b, context)
+{
+    var viewBounds = [a convertRect:[a bounds] toView:nil],
+        otherBounds = [b convertRect:[b bounds] toView:nil];
+
+    if (CGRectGetMinY(viewBounds) < CGRectGetMinY(otherBounds))
+        return -1;
+    else if (CGRectGetMinY(viewBounds) == CGRectGetMinY(otherBounds) && CGRectGetMinX(viewBounds) < CGRectGetMinX(otherBounds))
+        return -1;
+    else if (CGRectGetMinX(viewBounds) == CGRectGetMinX(otherBounds) && CGRectGetMinX(viewBounds) == CGRectGetMinX(otherBounds))
+        return 0;
+    else
+        return 1;
+}
 
 @implementation CPWindow (MenuBar)
 
