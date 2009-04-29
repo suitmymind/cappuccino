@@ -7,7 +7,7 @@
  */
 
 @import <Foundation/CPObject.j>
-
+@import <AppKit/CPThemedAttribute.j>
 
 @implementation AristoThemeDescriptor : CPObject
 {
@@ -110,7 +110,7 @@
 
 + (CPTextField)themedStandardTextField
 {
-    var textfield = [[CPTextField alloc] initWithFrame:CGRectMake(0.0, 0.0, 60.0, 22.0)],
+    var textfield = [[CPTextField alloc] initWithFrame:CGRectMake(0.0, 0.0, 60.0, 29.0)],
         bezelColor = [CPColor colorWithPatternImage:[[CPNinePartImage alloc] initWithImageSlices:
             [
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-0.png" size:CGSizeMake(2.0, 3.0)],
@@ -122,15 +122,35 @@
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-6.png" size:CGSizeMake(2.0, 2.0)],
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-7.png" size:CGSizeMake(1.0, 2.0)],
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-8.png" size:CGSizeMake(2.0, 2.0)]
+            ]]],
+
+        bezelFocusedColor = [CPColor colorWithPatternImage:[[CPNinePartImage alloc] initWithImageSlices:
+            [
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-0.png" size:CGSizeMake(6.0, 7.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-1.png" size:CGSizeMake(1.0, 7.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-2.png" size:CGSizeMake(6.0, 7.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-3.png" size:CGSizeMake(6.0, 1.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-4.png" size:CGSizeMake(1.0, 1.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-5.png" size:CGSizeMake(6.0, 1.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-6.png" size:CGSizeMake(6.0, 5.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-7.png" size:CGSizeMake(1.0, 5.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-square-focused-8.png" size:CGSizeMake(6.0, 5.0)]
             ]]];
 
     [textfield setBezeled:YES];
+
     [textfield setValue:bezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBezeled];
+    [textfield setValue:bezelFocusedColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBezeled|CPControlStateEditing];
+
     [textfield setValue:[CPFont systemFontOfSize:12.0] forThemedAttributeName:@"font"];
-    [textfield setValue:CGInsetMake(5.0, 4.0, 2.0, 3.0) forThemedAttributeName:@"content-inset" inControlState:CPControlStateBezeled];
-    
+
+    [textfield setValue:CGInsetMake(9.0, 8.0, 5.0, 7.0) forThemedAttributeName:@"content-inset" inControlState:CPControlStateBezeled];
+
+    [textfield setValue:CGInsetMake(4.0, 4.0, 3.0, 4.0) forThemedAttributeName:@"bezel-inset" inControlState:CPControlStateBezeled];
+    [textfield setValue:CGInsetMake(0.0, 0.0, 0.0, 0.0) forThemedAttributeName:@"bezel-inset" inControlState:CPControlStateBezeled|CPControlStateEditing];
+
     [textfield setValue:[CPColor colorWithCalibratedRed:189.0 / 255.0 green:199.0 / 255.0 blue:211.0 / 255.0 alpha:1.0] forThemedAttributeName:@"text-color" inControlState:CPTextFieldStatePlaceholder];
-    
+
     [textfield setPlaceholderString:"cheese cheese"];
     [textfield setStringValue:""];
     [textfield setEditable:YES];
@@ -140,22 +160,35 @@
 
 + (CPTextField)themedRoundedTextField
 {   
-    var textfield = [[CPTextField alloc] initWithFrame:CGRectMake(0.0, 0.0, 60.0, 22.0)],
+    var textfield = [[CPTextField alloc] initWithFrame:CGRectMake(0.0, 0.0, 60.0, 30.0)],
         bezelColor = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:
             [
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-left.png" size:CGSizeMake(13.0, 22.0)],
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-center.png" size:CGSizeMake(1.0, 22.0)],
                 [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-right.png" size:CGSizeMake(13.0, 22.0)]
+            ] isVertical:NO]],
+
+        bezelFocusedColor = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:
+            [
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-focused-left.png" size:CGSizeMake(17.0, 30.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-focused-center.png" size:CGSizeMake(1.0, 30.0)],
+                [_CPCibCustomResource imageResourceWithName:"textfield-bezel-rounded-focused-right.png" size:CGSizeMake(17.0, 30.0)]
             ] isVertical:NO]];
 
     [textfield setBezeled:YES];
     [textfield setBezelStyle:CPTextFieldRoundedBezel];
+
     [textfield setValue:bezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBezeled | CPTextFieldStateRounded];
+    [textfield setValue:bezelFocusedColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBezeled | CPTextFieldStateRounded | CPControlStateEditing];
+
     [textfield setValue:[CPFont systemFontOfSize:12.0] forThemedAttributeName:@"font"];
-    [textfield setValue:CGInsetMake(5.0, 10.0, 2.0, 10.0) forThemedAttributeName:@"content-inset" inControlState:CPControlStateBezeled | CPTextFieldStateRounded];
-    
+    [textfield setValue:CGInsetMake(9.0, 14.0, 6.0, 14.0) forThemedAttributeName:@"content-inset" inControlState:CPControlStateBezeled | CPTextFieldStateRounded];
+
+    [textfield setValue:CGInsetMake(4.0, 4.0, 4.0, 4.0) forThemedAttributeName:@"bezel-inset" inControlState:CPControlStateBezeled|CPTextFieldStateRounded];
+    [textfield setValue:CGInsetMake(0.0, 0.0, 0.0, 0.0) forThemedAttributeName:@"bezel-inset" inControlState:CPControlStateBezeled|CPTextFieldStateRounded|CPControlStateEditing];
+
     [textfield setValue:[CPColor colorWithCalibratedRed:189.0 / 255.0 green:199.0 / 255.0 blue:211.0 / 255.0 alpha:1.0] forThemedAttributeName:@"text-color" inControlState:CPTextFieldStatePlaceholder];
-    
+
     [textfield setPlaceholderString:"cheese cheese"];
     [textfield setStringValue:""];
     [textfield setEditable:YES];
@@ -173,7 +206,7 @@
                 [_CPCibCustomResource imageResourceWithName:"button-bezel-center.png" size:CGSizeMake(1.0, 24.0)],
                 [_CPCibCustomResource imageResourceWithName:"button-bezel-right.png" size:CGSizeMake(4.0, 24.0)]
             ]
-        isVertical:NO]];
+        isVertical:NO]],
 
         highlightedBezelColor = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:
             [
@@ -181,7 +214,24 @@
                 [_CPCibCustomResource imageResourceWithName:"button-bezel-highlighted-center.png" size:CGSizeMake(1.0, 24.0)],
                 [_CPCibCustomResource imageResourceWithName:"button-bezel-highlighted-right.png" size:CGSizeMake(4.0, 24.0)]
             ]
+        isVertical:NO]],
+
+        defaultBezelColor = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:
+            [
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-left.png" size:CGSizeMake(4.0, 24.0)],
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-center.png" size:CGSizeMake(1.0, 24.0)],
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-right.png" size:CGSizeMake(4.0, 24.0)]
+            ]
+        isVertical:NO]],
+
+        defaultHighlightedBezelColor = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:
+            [
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-highlighted-left.png" size:CGSizeMake(4.0, 24.0)],
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-highlighted-center.png" size:CGSizeMake(1.0, 24.0)],
+                [_CPCibCustomResource imageResourceWithName:"default-button-bezel-highlighted-right.png" size:CGSizeMake(4.0, 24.0)]
+            ]
         isVertical:NO]];
+
                 
     [button setTitle:@"Cancel"];
     
@@ -194,6 +244,10 @@
     [button setValue:bezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBordered];
     [button setValue:highlightedBezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBordered|CPControlStateHighlighted];
     [button setValue:CGInsetMake(0.0, 5.0, 0.0, 5.0) forThemedAttributeName:@"content-inset" inControlState:CPControlStateBordered];
+
+    [button setValue:defaultBezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBordered|CPControlStateDefault];
+    [button setValue:defaultHighlightedBezelColor forThemedAttributeName:@"bezel-color" inControlState:CPControlStateBordered|CPControlStateHighlighted|CPControlStateDefault];
+    [button setValue:[CPColor colorWithCalibratedRed:13.0/255.0 green:51.0/255.0 blue:70.0/255.0 alpha:1.0] forThemedAttributeName:@"text-color" inControlState:CPControlStateDefault];
 
     [button setValue:24.0 forThemedAttributeName:@"default-height"];
 
@@ -261,7 +315,7 @@
         isVertical:NO]];
 
     [slider setValue:5.0 forThemedAttributeName:@"track-width"];
-    [slider setValue:trackColor forThemedAttributeName:@"horizontal-track-color"];
+    [slider setValue:trackColor forThemedAttributeName:@"track-color"];
     
         var knobColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"knob.png" size:CGSizeMake(23.0, 24.0)]];
         knobHighlightedColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"knob-highlighted.png" size:CGSizeMake(23.0, 24.0)]];
@@ -285,7 +339,7 @@
         isVertical:YES]];
         
     [slider setValue:5.0 forThemedAttributeName:@"track-width"];
-    [slider setValue:trackColor forThemedAttributeName:@"vertical-track-color"];
+    [slider setValue:trackColor forThemedAttributeName:@"track-color"];
     
         var knobColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"knob.png" size:CGSizeMake(23.0, 24.0)]];
         knobHighlightedColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"knob-highlighted.png" size:CGSizeMake(23.0, 24.0)]];
@@ -296,6 +350,26 @@
     
     return slider;
 }
+
++ (CPSlider)themedCircularSlider
+{
+    var slider = [[CPSlider alloc] initWithFrame:CGRectMake(0.0, 0.0, 32.0, 32.0)],
+        trackColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"circularSliderBezel.png" size:CGSizeMake(32.0, 32.0)]];
+
+    [slider setSliderType:CPCircularSlider];
+    [slider setValue:trackColor forThemedAttributeName:@"track-color" inControlState:CPControlStateCircular];
+    [slider setValue:trackColor forThemedAttributeName:@"track-color" inControlState:CPControlStateCircular|CPControlStateVertical];
+
+    var knobColor = [CPColor colorWithPatternImage:[_CPCibCustomResource imageResourceWithName:"circularSliderKnob.png" size:CGSizeMake(5.0, 5.0)]],
+        knobHighlightedColor = knobColor;
+
+    [slider setValue:CGSizeMake(5.0, 5.0) forThemedAttributeName:@"knob-size" inControlState:CPControlStateCircular];
+    [slider setValue:knobColor forThemedAttributeName:@"knob-color" inControlState:CPControlStateCircular];
+    [slider setValue:knobHighlightedColor forThemedAttributeName:@"knob-color" inControlState:CPControlStateCircular|CPControlStateHighlighted];
+
+    return slider;
+}
+
 /*
     var buttonBar = [[CPButtonBar alloc] initWithFrame:CGRectMake(0.0, 0.0, 100.0, 30.0)],
         color = [CPColor colorWithPatternImage:[[CPThreePartImage alloc] initWithImageSlices:

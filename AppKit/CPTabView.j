@@ -238,6 +238,9 @@ var CPTabViewDidSelectTabViewItemSelector           = 1,
 */
 - (void)insertTabViewItem:(CPTabViewItem)aTabViewItem atIndex:(unsigned)anIndex
 {
+    if (!_labelsView && _tabViewType == CPTopTabsBezelBorder)
+        [self _createBezelBorder];
+    
     [_tabViewItems insertObject:aTabViewItem atIndex:anIndex];
     
     [_labelsView tabView:self didAddTabViewItem:aTabViewItem];
@@ -283,7 +286,7 @@ var CPTabViewDidSelectTabViewItemSelector           = 1,
         count = [_tabViewItems count];
         
     for (; index < count; ++index)
-        if ([[_tabViewItems[index] identifier] isEqualTo:anIdentifier])
+        if ([[_tabViewItems[index] identifier] isEqual:anIdentifier])
             return index;
 
     return index;
