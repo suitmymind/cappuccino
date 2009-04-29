@@ -453,6 +453,9 @@ CPTextFieldStatePlaceholder = 1 << 13;
 /* @ignore */
 - (BOOL)becomeFirstResponder
 {
+    if (CPTextFieldInputOwner && [CPTextFieldInputOwner window] !== [self window])
+        [[CPTextFieldInputOwner window] makeFirstResponder:nil];
+
     _controlState |= CPControlStateEditing;
 
     [self _updatePlaceholderState];
@@ -771,6 +774,10 @@ CPTextFieldStatePlaceholder = 1 << 13;
 
 var secureStringForString = function(aString)
 {
+    // This is true for when aString === "" and null/undefined.
+    if (!aString)
+        return "";
+
     var secureString = "",
         length = aString.length;
 

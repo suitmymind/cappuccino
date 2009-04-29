@@ -114,7 +114,7 @@
     _brightnessSlider = [[CPSlider alloc] initWithFrame:CGRectMake(0, (aFrame.size.height - 34), aFrame.size.width, 15)];
 
     [_brightnessSlider setValue:15.0 forThemedAttributeName:@"track-width"];
-    [_brightnessSlider setValue:[CPColor colorWithPatternImage:[[CPImage alloc] initWithContentsOfFile:[[CPBundle bundleForClass:[CPColorPicker class]] pathForResource:@"brightness_bar.png"]]] forThemedAttributeName:@"horizontal-track-color"];
+    [_brightnessSlider setValue:[CPColor colorWithPatternImage:[[CPImage alloc] initWithContentsOfFile:[[CPBundle bundleForClass:[CPColorPicker class]] pathForResource:@"brightness_bar.png"]]] forThemedAttributeName:@"track-color"];
 
     [_brightnessSlider setMinValue:0.0];
     [_brightnessSlider setMaxValue:100.0];
@@ -151,7 +151,10 @@
     [_hueSaturationView setWheelBrightness:brightness / 100.0];
     [_brightnessSlider setBackgroundColor:[CPColor colorWithHue:hue saturation:saturation brightness:100]];
 
-    _cachedColor = [CPColor colorWithHue:hue saturation:saturation brightness:brightness];
+    var colorPanel = [self colorPanel],
+        opacity = [colorPanel opacity];
+
+    _cachedColor = [CPColor colorWithHue:hue saturation:saturation brightness:brightness alpha:opacity];
 
     [[self colorPanel] setColor:_cachedColor];
 }
