@@ -552,9 +552,33 @@ var DOMElementPrototype         = nil,
     return enclosingMenuItem;*/
 }
 
-- (int)tag
+- (void)setTag:(CPInteger)aTag
+{
+    _tag = aTag;
+}
+
+- (CPInteger)tag
 {
     return _tag;
+}
+
+- (void)viewWithTag:(CPInteger)aTag
+{
+    if ([self tag] === aTag)
+        return self;
+
+    var index = 0,
+        count = _subviews.length;
+
+    for (; index < count; ++index)
+    {
+        var view = [_subviews[index] viewWithTag:aTag];
+
+        if (view)
+            return view;
+    }
+
+    return nil;
 }
 
 /*!
@@ -882,7 +906,7 @@ var DOMElementPrototype         = nil,
 */
 - (void)setAutoresizesSubviews:(BOOL)aFlag
 {
-    _autoresizesSubviews = aFlag;
+    _autoresizesSubviews = !!aFlag;
 }
 
 /*!
@@ -968,9 +992,9 @@ var DOMElementPrototype         = nil,
 {
     if (!_isInFullScreenMode)
         return;
-    
+
     _isInFullScreenMode = NO;
-    
+
     [self setFrame:_fullScreenModeState.frame];
     [self setAutoresizingMask:_fullScreenModeState.autoresizingMask];
     [_fullScreenModeState.superview _insertSubview:self atIndex:_fullScreenModeState.index];
@@ -992,8 +1016,11 @@ var DOMElementPrototype         = nil,
 */
 - (void)setHidden:(BOOL)aFlag
 {
-    if(_isHidden == aFlag) 
+    aFlag = !!aFlag;
+
+    if(_isHidden === aFlag)
         return;
+
 //  FIXME: Should we return to visibility?  This breaks in FireFox, Opera, and IE.
 //    _DOMElement.style.visibility = (_isHidden = aFlag) ? "hidden" : "visible";
     _isHidden = aFlag;
@@ -1104,7 +1131,7 @@ var DOMElementPrototype         = nil,
 */
 - (void)setHitTests:(BOOL)shouldHitTest
 {
-    _hitTests = shouldHitTest;
+    _hitTests = !!shouldHitTest;
 }
 
 /*!
@@ -1350,11 +1377,13 @@ setFrameOrigin:
 */
 - (void)setPostsFrameChangedNotifications:(BOOL)shouldPostFrameChangedNotifications
 {
-    if (_postsFrameChangedNotifications == shouldPostFrameChangedNotifications)
+    shouldPostFrameChangedNotifications = !!shouldPostFrameChangedNotifications;
+
+    if (_postsFrameChangedNotifications === shouldPostFrameChangedNotifications)
         return;
-    
+
     _postsFrameChangedNotifications = shouldPostFrameChangedNotifications;
-    
+
     if (_postsFrameChangedNotifications)
         [CachedNotificationCenter postNotificationName:CPViewFrameDidChangeNotification object:self];
 }
@@ -1381,11 +1410,13 @@ setBoundsOrigin:
 */
 - (void)setPostsBoundsChangedNotifications:(BOOL)shouldPostBoundsChangedNotifications
 {
-    if (_postsBoundsChangedNotifications == shouldPostBoundsChangedNotifications)
+    shouldPostBoundsChangedNotifications = !!shouldPostBoundsChangedNotifications;
+
+    if (_postsBoundsChangedNotifications === shouldPostBoundsChangedNotifications)
         return;
-    
+
     _postsBoundsChangedNotifications = shouldPostBoundsChangedNotifications;
-    
+
     if (_postsBoundsChangedNotifications)
         [CachedNotificationCenter postNotificationName:CPViewBoundsDidChangeNotification object:self];
 }
@@ -1913,7 +1944,7 @@ setBoundsOrigin:
 */
 - (void)setWantsLayer:(BOOL)aFlag
 {
-    _wantsLayer = aFlag;
+    _wantsLayer = !!aFlag;
 }
 
 /*!
@@ -1929,6 +1960,11 @@ setBoundsOrigin:
 
 @implementation CPView (Theming)
 #pragma mark Theme States
+
+- (unsigned)themeState
+{
+    return _themeState;
+}
 
 - (BOOL)hasThemeState:(CPThemeState)aState
 {
@@ -2186,20 +2222,17 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
     
     if (self)
     {
-        _tag = -1;
-        
-        if ([aCoder containsValueForKey:CPViewTagKey])
-            _tag = [aCoder decodeIntForKey:CPViewTagKey];
+        // We have to manually check because it may be 0, so we can't use ||
+        _tag = [aCoder containsValueForKey:CPViewTagKey] ? [aCoder decodeIntForKey:CPViewTagKey] : -1;
         
         _window = [aCoder decodeObjectForKey:CPViewWindowKey];
-        _subviews = [aCoder decodeObjectForKey:CPViewSubviewsKey];
+        _subviews = [aCoder decodeObjectForKey:CPViewSubviewsKey] || [];
         _superview = [aCoder decodeObjectForKey:CPViewSuperviewKey];
         
-        _autoresizingMask = [aCoder decodeIntForKey:CPViewAutoresizingMaskKey] || 0;
-        _autoresizesSubviews = [aCoder decodeBoolForKey:CPViewAutoresizesSubviewsKey];
-        
-        _hitTests = [aCoder decodeObjectForKey:CPViewHitTestsKey];
-        _opacity = [aCoder decodeIntForKey:CPViewOpacityKey];
+        _autoresizingMask = [aCoder decodeIntForKey:CPViewAutoresizingMaskKey] || CPViewNotSizable;
+        _autoresizesSubviews = ![aCoder containsValueForKey:CPViewAutoresizesSubviewsKey] || [aCoder decodeBoolForKey:CPViewAutoresizesSubviewsKey];
+
+        _hitTests = ![aCoder containsValueForKey:CPViewHitTestsKey] || [aCoder decodeObjectForKey:CPViewHitTestsKey];
     
         // DOM SETUP
 #if PLATFORM(DOM)
@@ -2220,10 +2253,20 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
 #endif
         _displayHash = [self hash];
 
+        if ([aCoder containsValueForKey:CPViewIsHiddenKey])
+            [self setHidden:[aCoder decodeBoolForKey:CPViewIsHiddenKey]];
+        else
+            _isHidden = NO;
+
+        if ([aCoder containsValueForKey:CPViewOpacityKey])
+            [self setAlphaValue:[aCoder decodeIntForKey:CPViewOpacityKey]];
+        else
+            _opacity = 1.0;
+
         [self setBackgroundColor:[aCoder decodeObjectForKey:CPViewBackgroundColorKey]];
-        
+
         _theme = [CPTheme defaultTheme];
-        _themeState = [aCoder decodeIntForKey:CPViewThemeStateKey];
+        _themeState = CPThemeState([aCoder decodeIntForKey:CPViewThemeStateKey]);
         _themeAttributes = {};
 
         var theClass = [self class],
@@ -2237,13 +2280,8 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
 
             _themeAttributes[attributeName] = CPThemeAttributeDecode(aCoder, attributeName, attributes[count], _theme, themeClass);
         }
-        
-        [self setNeedsDisplay:YES];
-    
-        _isHidden = NO;
 
-        if ([aCoder containsValueForKey:CPViewIsHiddenKey])
-            [self setHidden:[aCoder decodeBoolForKey:CPViewIsHiddenKey]];
+        [self setNeedsDisplay:YES];
     }
 
     return self;
@@ -2257,31 +2295,52 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
 {
     [super encodeWithCoder:aCoder];
     
-    if (_tag != -1)
+    if (_tag !== -1)
         [aCoder encodeInt:_tag forKey:CPViewTagKey];
-    
+
     [aCoder encodeRect:_frame forKey:CPViewFrameKey];
     [aCoder encodeRect:_bounds forKey:CPViewBoundsKey];
-    
-    [aCoder encodeConditionalObject:_window forKey:CPViewWindowKey];
-    [aCoder encodeObject:_subviews forKey:CPViewSubviewsKey];
-    [aCoder encodeConditionalObject:_superview forKey:CPViewSuperviewKey];
-        
-    [aCoder encodeInt:_autoresizingMask forKey:CPViewAutoresizingMaskKey];
-    [aCoder encodeBool:_autoresizesSubviews forKey:CPViewAutoresizesSubviewsKey];
-        
-    [aCoder encodeObject:_backgroundColor forKey:CPViewBackgroundColorKey];
-        
-    [aCoder encodeBool:_hitTests forKey:CPViewHitTestsKey];
-    [aCoder encodeFloat:_opacity forKey:CPViewOpacityKey];
+
+    // This will come out nil on the other side with decodeObjectForKey:
+    if (_window !== nil)
+        [aCoder encodeConditionalObject:_window forKey:CPViewWindowKey];
+
+    if (_subviews.length > 0)
+        [aCoder encodeObject:_subviews forKey:CPViewSubviewsKey];
+
+    // This will come out nil on the other side with decodeObjectForKey:
+    if (_superview !== nil)
+        [aCoder encodeConditionalObject:_superview forKey:CPViewSuperviewKey];
+
+    if (_autoresizingMask !== CPViewNotSizable)
+        [aCoder encodeInt:_autoresizingMask forKey:CPViewAutoresizingMaskKey];
+
+    if (!_autoresizesSubviews)
+        [aCoder encodeBool:_autoresizesSubviews forKey:CPViewAutoresizesSubviewsKey];
+
+    if (_backgroundColor !== nil)
+        [aCoder encodeObject:_backgroundColor forKey:CPViewBackgroundColorKey];
+
+    if (_hitTests !== YES)
+        [aCoder encodeBool:_hitTests forKey:CPViewHitTestsKey];
+
+    if (_opacity !== 1.0)
+        [aCoder encodeFloat:_opacity forKey:CPViewOpacityKey];
 
     if (_isHidden)
         [aCoder encodeBool:_isHidden forKey:CPViewIsHiddenKey];
 
-    [aCoder encodeConditionalObject:[self nextKeyView] forKey:CPViewNextKeyViewKey];
-    [aCoder encodeConditionalObject:[self previousKeyView] forKey:CPViewPreviousKeyViewKey];
+    var nextKeyView = [self nextKeyView];
 
-    [aCoder encodeInt:_themeState forKey:CPViewThemeStateKey];
+    if (nextKeyView !== nil)
+        [aCoder encodeConditionalObject:nextKeyView forKey:CPViewNextKeyViewKey];
+
+    var previousKeyView = [self previousKeyView];
+
+    if (previousKeyView !== nil)
+        [aCoder encodeConditionalObject:previousKeyView forKey:CPViewPreviousKeyViewKey];
+
+    [aCoder encodeInt:CPThemeStateName(_themeState) forKey:CPViewThemeStateKey];
 
     for (var attributeName in _themeAttributes)
         if (_themeAttributes.hasOwnProperty(attributeName))
