@@ -14,13 +14,17 @@ var _CPCibConnectorSourceKey        = @"_CPCibConnectorSourceKey",
     CPString    _label;
 }
 
-- (void)replaceObject:(id)anObject withObject:(id)anotherObject
+- (void)replaceObjects:(JSObject)replacementObjects
 {
-    if (_source == anObject)
-        _source = anotherObject;
-    
-    else if (_destination == anObject)
-        _destination = anotherObject;
+    var replacement = replacementObjects[[_source hash]];
+
+    if (replacement !== undefined)
+        _source = replacement;
+
+    replacement = replacementObjects[[_destination hash]];
+
+    if (replacement !== undefined)
+        _destination = replacement;
 }
 
 @end
@@ -36,10 +40,6 @@ var _CPCibConnectorSourceKey        = @"_CPCibConnectorSourceKey",
         _source = [aCoder decodeObjectForKey:_CPCibConnectorSourceKey];
         _destination = [aCoder decodeObjectForKey:_CPCibConnectorDestinationKey];
         _label = [aCoder decodeObjectForKey:_CPCibConnectorLabelKey];
-        
-#if DEBUG
-        CPLog("Connection from " + [_source description] + " to " + [_destination description] + " and label " + _label + " decoded.");
-#endif
     }
     
     return self;
@@ -60,11 +60,6 @@ var _CPCibConnectorSourceKey        = @"_CPCibConnectorSourceKey",
 
 - (void)establishConnection
 {
-#if DEBUG
-    CPLog('[' + [_source description] + " setTarget: " + [_destination description] + ']');
-    CPLog('[' + [_source description] + " setAction: " + _label + ']');
-#endif
-
     var selectorName = _label;
     
     if (![selectorName hasSuffix:@":"])
@@ -102,10 +97,6 @@ var _CPCibConnectorSourceKey        = @"_CPCibConnectorSourceKey",
 
 - (void)establishConnection
 {
-#if DEBUG
-    CPLog([_source description] + " setValue: " + [_destination description] + " forKey: " + _label);
-#endif
-    
     [_source setValue:_destination forKey:_label];
 }
 

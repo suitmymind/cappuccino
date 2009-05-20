@@ -46,11 +46,7 @@ var _CPCibCustomViewClassNameKey    = @"_CPCibCustomViewClassNameKey";
     self = [super initWithCoder:aCoder];
 
     if (self)
-    {
         _className = [aCoder decodeObjectForKey:_CPCibCustomViewClassNameKey];
-    
-        [self setBackgroundColor:[CPColor blueColor]];
-    }
     
     return self;
 }
@@ -62,6 +58,18 @@ var _CPCibCustomViewClassNameKey    = @"_CPCibCustomViewClassNameKey";
     [aCoder encodeObject:_className forKey:_CPCibCustomViewClassNameKey];
 }
 
+- (void)drawRect:(CGRect)aRect
+{
+    var bounds = [self bounds],
+        context = [[CPGraphicsContext currentContext] graphicsPort];
+
+    CGContextSetLineWidth(context, 1.0);
+    CGContextSetStrokeColor(context, [CPColor colorWithCalibratedRed:169.0 / 255.0 green:173.0 / 255.0 blue:178.0 / 255.0 alpha:1.0]);
+    CGContextStrokeRect(context, CGRectInset(CGRectIntegral(bounds), 0.5, 0.5));
+    CGContextSetFillColor(context, [CPColor colorWithCalibratedRed:224.0 / 255.0 green:236.0 / 255.0 blue:250.0 / 255.0 alpha:1.0]);
+    CGContextFillRect(context, CGRectInset(bounds, 2.0, 2.0));
+}
+
 - (id)_cibInstantiate
 {
     var theClass = CPClassFromString(_className);
@@ -70,22 +78,24 @@ var _CPCibCustomViewClassNameKey    = @"_CPCibCustomViewClassNameKey";
     // FIXME: Should we instead throw an exception?
     if (!theClass)
     {
+#if DEBUG
         CPLog("Unknown class \"" + _className + "\" in cib file, using CPView instead.");
-        
+#endif        
         theClass = [CPView class];
     }
     
     // Hey this is us!
     if (theClass === [self class])
+    {
+        _className = @"CPView";
+
         return self;
+    }
 
     var view = [[theClass alloc] initWithFrame:[self frame]];
         
     if (view)
     {
-        view._superview = _superview;
-        view._window = _window; // Doesn't matter that we don't call _setWindow: since nothing has a window yet anyways(?)
-        
         [view setBounds:[self bounds]];
         
         // Since the object replacement logic hasn't had a chance to kick in yet, we need to do it manually:
@@ -104,7 +114,9 @@ var _CPCibCustomViewClassNameKey    = @"_CPCibCustomViewClassNameKey";
         [view setHitTests:[self hitTests]];
         [view setHidden:[self isHidden]];
         [view setAlphaValue:[self alphaValue]];
-    
+        
+        [_superview replaceSubview:self with:view];
+
         [view setBackgroundColor:[self backgroundColor]];
     }
     

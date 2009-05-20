@@ -60,7 +60,9 @@ var _CPKeyedArchiverStringClass                         = Nil,
 }
 @end
 
-/*! @class CPKeyedArchiver
+/*! 
+    @ingroup foundation
+    @class CPKeyedArchiver
 
     Implements keyed archiving of object graphs. Archiving means to
     write data out in a format that be read in again later, or possibly
@@ -95,6 +97,7 @@ var _CPKeyedArchiverStringClass                         = Nil,
     @param object the object to be replaced
     @param newObject the replacement object
 */
+
 @implementation CPKeyedArchiver : CPCoder
 {
     id                      _delegate;
@@ -205,8 +208,8 @@ var _CPKeyedArchiverStringClass                         = Nil,
         // We call willEncodeObject previously.
         
         _plistObject = _plistObjects[[_UIDs objectForKey:[object hash]]];
-        [object encodeWithCoder:self];        
-        
+        [object encodeWithCoder:self];
+
         if (_delegate && _delegateSelectors & _CPKeyedArchiverDidEncodeObjectSelector)
             [_delegate archiver:self didEncodeObject:object];
     }
@@ -532,7 +535,7 @@ var _CPKeyedArchiverEncodeObject = function(self, anObject, isConditional)
         }
         else
         {
-            var theClass = [anObject classForKeyedArchiver],
+            var theClass = [object classForKeyedArchiver],
                 plistObject = nil;
             
             if ((theClass === _CPKeyedArchiverStringClass) || (theClass === _CPKeyedArchiverNumberClass))// || theClass == _CPKeyedArchiverBooleanClass)

@@ -28,7 +28,9 @@
 @import <AppKit/CPMenu.j>
 @import <AppKit/CPView.j>
 
-/*! @class CPMenuItem
+/*! 
+    @ingroup appkit
+    @class CPMenuItem
 
     A CPMenuItem is added to a CPMenu.
     It has an action and a target for that action to be sent to
@@ -113,11 +115,11 @@
 {
     if ([_menu autoenablesItems])
         return;
-        
+
     _isEnabled = isEnabled;
-    
+
     [_menuItemView setDirty];
-    
+
     [_menu itemChanged:self];
 }
 
@@ -686,7 +688,7 @@ CPControlKeyMask
 */
 - (void)setView:(CPView)aView
 {
-    if (_view == aView)
+    if (_view === aView)
         return;
     
     _view = aView;
@@ -754,19 +756,24 @@ CPControlKeyMask
 var CPMenuItemTitleKey              = @"CPMenuItemTitleKey",
     CPMenuItemTargetKey             = @"CPMenuItemTargetKey",
     CPMenuItemActionKey             = @"CPMenuItemActionKey",
-    
+
     CPMenuItemIsEnabledKey          = @"CPMenuItemIsEnabledKey",
     CPMenuItemIsHiddenKey           = @"CPMenuItemIsHiddenKey",
-    
+
     CPMenuItemTagKey                = @"CPMenuItemTagKey",
-    
+    CPMenuItemStateKey              = @"CPMenuItemStateKey",
+
     CPMenuItemImageKey              = @"CPMenuItemImageKey",
     CPMenuItemAlternateImageKey     = @"CPMenuItemAlternateImageKey",
-    
+
     CPMenuItemSubmenuKey            = @"CPMenuItemSubmenuKey",
     CPMenuItemMenuKey               = @"CPMenuItemMenuKey",
-    
-    CPMenuItemRepresentedObjectKey  = @"CPMenuItemRepresentedObjectKey";
+
+    CPMenuItemRepresentedObjectKey  = @"CPMenuItemRepresentedObjectKey",
+    CPMenuItemViewKey               = @"CPMenuItemViewKey";
+
+#define DEFAULT_VALUE(aKey, aDefaultValue) [aCoder containsValueForKey:(aKey)] ? [aCoder decodeObjectForKey:(aKey)] : (aDefaultValue)
+#define ENCODE_IFNOT(aKey, aValue, aDefaultValue) if ((aValue) !== (aDefaultValue)) [aCoder encodeObject:(aValue) forKey:(aKey)];
 
 @implementation CPMenuItem (CPCoding)
 /*!
@@ -787,22 +794,21 @@ var CPMenuItemTitleKey              = @"CPMenuItemTitleKey",
         _target = [aCoder decodeObjectForKey:CPMenuItemTargetKey];
         _action = [aCoder decodeObjectForKey:CPMenuItemActionKey];
 
-        _isEnabled = [aCoder decodeObjectForKey:CPMenuItemIsEnabledKey];
-        _isHidden = [aCoder decodeObjectForKey:CPMenuItemIsHiddenKey];
-
-        _tag = [aCoder containsValueForKey:CPMenuItemTagKey] ? [aCoder decodeObjectForKey:CPMenuItemTagKey] : 0;
-
+        _isEnabled = DEFAULT_VALUE(CPMenuItemIsEnabledKey, YES);
+        _isHidden = DEFAULT_VALUE(CPMenuItemIsHiddenKey, NO);
+        _tag = DEFAULT_VALUE(CPMenuItemTagKey, 0);
+        _state = DEFAULT_VALUE(CPMenuItemStateKey, CPOffState);
 //    int             _state;
-                    
-        _image = [aCoder decodeObjectForKey:CPMenuItemImageKey];
-        _alternateImage = [aCoder decodeObjectForKey:CPMenuItemAlternateImageKey];
+
+        _image = DEFAULT_VALUE(CPMenuItemImageKey, nil);
+        _alternateImage = DEFAULT_VALUE(CPMenuItemAlternateImageKey, nil);
 //    CPImage         _onStateImage;
 //    CPImage         _offStateImage;
 //    CPImage         _mixedStateImage;
 
-        _submenu = [aCoder decodeObjectForKey:CPMenuItemSubmenuKey];
-        _menu = [aCoder decodeObjectForKey:CPMenuItemMenuKey];
-                    
+        _submenu = DEFAULT_VALUE(CPMenuItemSubmenuKey, nil);
+        _menu = DEFAULT_VALUE(CPMenuItemMenuKey, nil);
+
 //    CPString        _keyEquivalent;
 //    unsigned        _keyEquivalentModifierMask;
 
@@ -810,12 +816,11 @@ var CPMenuItemTitleKey              = @"CPMenuItemTitleKey",
 
 //    BOOL            _isAlternate;
 //    int             _indentationLevel;
-                    
+
 //    CPString        _toolTip;
 
-    _representedObject = [aCoder decodeObjectForKey:CPMenuItemRepresentedObjectKey];
-//    id              _representedObject;
-//    CPView          _view;
+        _representedObject = DEFAULT_VALUE(CPMenuItemRepresentedObjectKey, nil);
+        _view = DEFAULT_VALUE(CPMenuItemViewKey, nil);
     }
     
     return self;
@@ -832,19 +837,20 @@ var CPMenuItemTitleKey              = @"CPMenuItemTitleKey",
     [aCoder encodeObject:_target forKey:CPMenuItemTargetKey];
     [aCoder encodeObject:_action forKey:CPMenuItemActionKey];
 
-    [aCoder encodeObject:_isEnabled forKey:CPMenuItemIsEnabledKey];
-    [aCoder encodeObject:_isHidden forKey:CPMenuItemIsHiddenKey];
+    ENCODE_IFNOT(CPMenuItemIsEnabledKey, _isEnabled, YES); 
+    ENCODE_IFNOT(CPMenuItemIsHiddenKey, _isHidden, NO);
 
-    if (_tag !== 0)
-        [aCoder encodeObject:_tag forKey:CPMenuItemTagKey];
+    ENCODE_IFNOT(CPMenuItemTagKey, _tag, 0);
+    ENCODE_IFNOT(CPMenuItemStateKey, _state, CPOffState);
 
-    [aCoder encodeObject:_image forKey:CPMenuItemImageKey];
-    [aCoder encodeObject:_alternateImage forKey:CPMenuItemAlternateImageKey];
+    ENCODE_IFNOT(CPMenuItemImageKey, _image, nil);
+    ENCODE_IFNOT(CPMenuItemAlternateImageKey, _alternateImage, nil);
     
-    [aCoder encodeObject:_submenu forKey:CPMenuItemSubmenuKey];
-    [aCoder encodeObject:_menu forKey:CPMenuItemMenuKey];
-    
-    [aCoder encodeObject:_representedObject forKey:CPMenuItemRepresentedObjectKey];
+    ENCODE_IFNOT(CPMenuItemSubmenuKey, _submenu, nil);
+    ENCODE_IFNOT(CPMenuItemMenuKey, _menu, nil);
+
+    ENCODE_IFNOT(CPMenuItemRepresentedObjectKey, _representedObject, nil);
+    ENCODE_IFNOT(CPMenuItemViewKey, _view, nil);
 }
 
 @end
@@ -870,6 +876,9 @@ var _CPMenuItemSelectionColor                   = nil,
 
     CPFont                  _font;
     CPColor                 _textColor;
+    CPColor                 _textShadowColor;
+    CPColor                 _activateColor;
+    CPColor                 _activateShadowColor;
 
     CGSize                  _minSize;
     BOOL                    _isDirty;
@@ -886,7 +895,8 @@ var _CPMenuItemSelectionColor                   = nil,
     if (self != [_CPMenuItemView class])
         return;
     
-    _CPMenuItemSelectionColor =  [CPColor colorWithCalibratedRed:81.0 / 255.0 green:83.0 / 255.0 blue:109.0 / 255.0 alpha:1.0];
+    _CPMenuItemSelectionColor =  [CPColor colorWithCalibratedRed:95.0 / 255.0 green:131.0 / 255.0 blue:185.0 / 255.0 alpha:1.0];
+    _CPMenuItemTextShadowColor = [CPColor colorWithCalibratedRed:26.0 / 255.0 green: 73.0 / 255.0 blue:109.0 / 255.0 alpha:1.0]
     
     var bundle = [CPBundle bundleForClass:self];
     
@@ -1033,6 +1043,8 @@ var _CPMenuItemSelectionColor                   = nil,
     [_imageAndTextView setImage:[_menuItem image]];
     [_imageAndTextView setText:[_menuItem title]];
     [_imageAndTextView setTextColor:[self textColor]];
+    [_imageAndTextView setTextShadowColor:[self textShadowColor]];
+    [_imageAndTextView setTextShadowOffset:CGSizeMake(0, 1)];
     [_imageAndTextView setFrameOrigin:CGPointMake(x, VERTICAL_MARGIN)];
     [_imageAndTextView sizeToFit];
     
@@ -1107,7 +1119,7 @@ var _CPMenuItemSelectionColor                   = nil,
             [self setBackgroundColor:nil];
             
             [_imageAndTextView setTextColor:[self textColor]];
-            [_imageAndTextView setTextShadowColor:nil];
+            [_imageAndTextView setTextShadowColor:[self textShadowColor]];
         }
         
         var state = [_menuItem state];
@@ -1130,12 +1142,14 @@ var _CPMenuItemSelectionColor                   = nil,
     
     if (shouldActivate)
     {
-        [_imageAndTextView setTextColor:[CPColor whiteColor]];
-        [_submenuView setColor:[CPColor whiteColor]];
+        [_imageAndTextView setTextColor:[self activateColor] || [CPColor whiteColor]];
+        [_imageAndTextView setTextShadowColor:[self activateShadowColor] || [CPColor blackColor]];
+        [_submenuView setColor:[self activateColor] || [CPColor whiteColor]];
     }
     else
     {
         [_imageAndTextView setTextColor:[self textColor]];
+        [_imageAndTextView setTextShadowColor:[self textShadowColor]];
         [_submenuView setColor:[self textColor]];
     }
 }
@@ -1181,7 +1195,43 @@ var _CPMenuItemSelectionColor                   = nil,
 
 - (CPColor)textColor
 {
-    return [_menuItem isEnabled] ? (_textColor ? _textColor : [CPColor blackColor]) : [CPColor darkGrayColor];
+    return [_menuItem isEnabled] ? (_textColor ? _textColor : [CPColor colorWithCalibratedRed:70.0 / 255.0 green:69.0 / 255.0 blue:69.0 / 255.0 alpha:1.0]) : [CPColor darkGrayColor];
+}
+
+- (void)setTextShadowColor:(CPColor)aColor
+{
+    if (_textShadowColor == aColor)
+        return;
+    
+    _textShadowColor = aColor;
+
+    [_imageAndTextView setTextShadowColor:[self textShadowColor]];
+    //[_submenuView setColor:[self textColor]];
+}
+
+- (CPColor)textShadowColor
+{
+    return [_menuItem isEnabled] ? (_textShadowColor ? _textShadowColor : [CPColor colorWithWhite:1.0 alpha:0.8]) : [CPColor colorWithWhite:0.8 alpha:0.8];
+}
+
+- (void)setActivateColor:(CPColor)aColor
+{
+    _activateColor = aColor;
+}
+
+- (CPColor)activateColor
+{
+    return _activateColor;
+}
+
+- (void)setActivateShadowColor:(CPColor)aColor
+{
+    _activateShadowColor = aColor;
+}
+
+- (CPColor)activateShadowColor
+{
+    return _activateShadowColor;
 }
 
 @end

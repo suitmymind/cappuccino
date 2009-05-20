@@ -58,15 +58,15 @@ var LEFT_SHADOW_INSET       = 3.0,
     VERTICAL_SHADOW_INSET   = TOP_SHADOW_INSET + BOTTOM_SHADOW_INSET,
     HORIZONTAL_SHADOW_INSET = LEFT_SHADOW_INSET + RIGHT_SHADOW_INSET;
 
-/*! @class CPImageView
+/*! 
+    @ingroup appkit
+    @class CPImageView
 
     This class is a control that displays an image.
 */
 @implementation CPImageView : CPControl
 {
     DOMElement      _DOMImageElement;
-    
-    CPImageScaling  _imageScaling;
     
     BOOL            _hasShadow;
     CPView          _shadowView;
@@ -145,14 +145,17 @@ var LEFT_SHADOW_INSET       = 3.0,
     else
     {
         [self hideOrDisplayContents];
-        [self tile];
+        [self setNeedsLayout];
+        [self setNeedsDisplay:YES];
     }
 }
 
 - (void)imageDidLoad:(CPNotification)aNotification
 {
     [self hideOrDisplayContents];
-    [self tile];
+    
+    [self setNeedsLayout];
+    [self setNeedsDisplay:YES];
 }
 
 /*!
@@ -181,7 +184,8 @@ var LEFT_SHADOW_INSET       = 3.0,
                         
         [self addSubview:_shadowView];
         
-        [self tile];
+        [self setNeedsLayout];
+        [self setNeedsDisplay:YES];
     }
     else
     {
@@ -200,35 +204,17 @@ var LEFT_SHADOW_INSET       = 3.0,
 */
 - (void)setImageScaling:(CPImageScaling)anImageScaling
 {
-    if (_imageScaling == anImageScaling)
-        return;
-    
-    _imageScaling = anImageScaling;
+    [super setImageScaling:anImageScaling];
     
 #if PLATFORM(DOM)
-    if (_imageScaling == CPScaleToFit)
+    if ([self currentValueForThemeAttribute:@"image-scaling"] === CPScaleToFit)
     {
         CPDOMDisplayServerSetStyleLeftTop(_DOMImageElement, NULL, 0.0, 0.0);
     }
 #endif
     
-    [self tile];
-}
-
-/*!
-    Returns the image scaling method used to
-    render this image.
-*/
-- (CPImageScaling)imageScaling
-{
-    return _imageScaling;
-}
-
-- (void)setFrameSize:(CGSize)aSize
-{
-    [super setFrameSize:aSize];
-    
-    [self tile];
+    [self setNeedsLayout];
+    [self setNeedsDisplay:YES];
 }
 
 /*!
@@ -263,13 +249,14 @@ var LEFT_SHADOW_INSET       = 3.0,
 /*!
     Add a description
 */
-- (void)tile
+- (void)layoutSubviews
 {
     if (![self image])
         return;
 
     var bounds = [self bounds],
         image = [self image],
+        imageScaling = [self currentValueForThemeAttribute:@"image-scaling"],
         x = 0.0,
         y = 0.0,
         insetWidth = (_hasShadow ? HORIZONTAL_SHADOW_INSET : 0.0),
@@ -278,8 +265,8 @@ var LEFT_SHADOW_INSET       = 3.0,
         boundsHeight = _CGRectGetHeight(bounds),
         width = boundsWidth - insetWidth,
         height = boundsHeight - insetHeight;
-        
-    if (_imageScaling == CPScaleToFit)
+
+    if (imageScaling === CPScaleToFit)
     {
 #if PLATFORM(DOM)
         _DOMImageElement.width = ROUND(width);
@@ -293,7 +280,7 @@ var LEFT_SHADOW_INSET       = 3.0,
         if (size.width == -1 && size.height == -1)
             return;
 
-        if (_imageScaling == CPScaleProportionally)
+        if (imageScaling === CPScaleProportionally)
         {
             // The max size it can be is size.width x size.height, so only
             // only proportion otherwise.
@@ -324,7 +311,7 @@ var LEFT_SHADOW_INSET       = 3.0,
             height = size.height;
         }
     
-        if (_imageScaling == CPScaleNone)
+        if (imageScaling == CPScaleNone)
         {
 #if PLATFORM(DOM)
             _DOMImageElement.width = ROUND(size.width);
@@ -383,10 +370,10 @@ var CPImageViewImageKey         = @"CPImageViewImageKey",
         _DOMElement.appendChild(_DOMImageElement);
 #endif
 
-        [self setImageScaling:[aCoder decodeIntForKey:CPImageViewImageScalingKey]];
         [self setHasShadow:[aCoder decodeBoolForKey:CPImageViewHasShadowKey]];
         
-        [self tile];
+        [self setNeedsLayout];
+        [self setNeedsDisplay:YES];
     }
     
     return self;
@@ -414,7 +401,6 @@ var CPImageViewImageKey         = @"CPImageViewImageKey",
     if (_shadowView)
         _subviews = actualSubviews;
     
-    [aCoder encodeInt:_imageScaling forKey:CPImageViewImageScalingKey];
     [aCoder encodeBool:_hasShadow forKey:CPImageViewHasShadowKey];
 }
 

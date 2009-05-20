@@ -24,8 +24,8 @@
 @import "CPShadow.j"
 @import "CPView.j"
 
+#include "CoreGraphics/CGGeometry.h"
 #include "Platform/Platform.h"
-
 
 /*
     @global
@@ -80,44 +80,57 @@ CPControlTextDidEndEditingNotification      = "CPControlTextDidEndEditingNotific
 
 var CPControlBlackColor     = [CPColor blackColor];
 
-/*! @class CPControl
+/*! 
+    @ingroup appkit
+    @class CPControl
 
     CPControl is an abstract superclass used to implement user interface elements. As a subclass of CPView and CPResponder it has the ability to handle screen drawing and handling user input.
 */
 @implementation CPControl : CPView
 {
-    id                      _value;
-    BOOL                    _isEnabled;
-    
-    // Display Properties
-    CPTextAlignment         _alignment;
-    CPVerticalTextAlignment _verticalAlignment;
-    
-    CPLineBreakMode         _lineBreakMode;
-    CPColor                 _textColor;
-    CPFont                  _font;
-    
-    CPCellImagePosition     _imagePosition;
-    CPImageScaling          _imageScaling;
-    
-    CPString                _toolTip;
+    id                  _value;
     
     // Target-Action Support
-    id                      _target;
-    SEL                     _action;
-    int                     _sendActionOn;
+    id                  _target;
+    SEL                 _action;
+    int                 _sendActionOn;
     
     // Mouse Tracking Support
-    BOOL                    _continuousTracking;
-    BOOL                    _trackingWasWithinFrame;
-    unsigned                _trackingMouseDownFlags;
-    CGPoint                 _previousTrackingLocation;
-
-    // Stuff
-    CPShadow    _textShadow;
+    BOOL                _continuousTracking;
+    BOOL                _trackingWasWithinFrame;
+    unsigned            _trackingMouseDownFlags;
+    CGPoint             _previousTrackingLocation;
     
-    CPDictionary    _backgroundColors;
-    CPString        _currentBackgroundColorName;
+    JSObject            _ephemeralSubviewsForNames;
+    CPSet               _ephereralSubviews;
+
+    CPString            _toolTip;
+}
+
++ (CPDictionary)themeAttributes
+{
+    return [CPDictionary dictionaryWithObjects:[CPLeftTextAlignment,
+                                                CPTopVerticalTextAlignment,
+                                                CPLineBreakByClipping,
+                                                [CPColor blackColor],
+                                                [CPFont systemFontOfSize:12.0],
+                                                nil,
+                                                _CGSizeMakeZero(),
+                                                CPImageLeft,
+                                                CPScaleToFit,
+                                                _CGSizeMakeZero(),
+                                                _CGSizeMake(-1.0, -1.0)]
+                                       forKeys:[@"alignment",
+                                                @"vertical-alignment",
+                                                @"line-break-mode",
+                                                @"text-color",
+                                                @"font",
+                                                @"text-shadow-color",
+                                                @"text-shadow-offset",
+                                                @"image-position",
+                                                @"image-scaling",
+                                                @"min-size",
+                                                @"max-size"]];
 }
 
 - (id)initWithFrame:(CGRect)aFrame
@@ -126,194 +139,64 @@ var CPControlBlackColor     = [CPColor blackColor];
     
     if (self)
     {
-        [self setVerticalAlignment:CPTopVerticalTextAlignment];
-        
         _sendActionOn = CPLeftMouseUpMask;
         _trackingMouseDownFlags = 0;
-        
-        _isEnabled = YES;
-        
-        [self setFont:[CPFont systemFontOfSize:12.0]];
-        [self setTextColor:CPControlBlackColor];
-        
-        _backgroundColors = [CPDictionary dictionary];
     }
     
     return self;
 }
 
 /*!
-    Sets whether the receiver responds to mouse events.
-    @param isEnabled whether the receiver will respond to mouse events
+    Sets the receiver's target action
+    @param anAction Sets the action message that gets sent to the target.
 */
-- (void)setEnabled:(BOOL)isEnabled
+- (void)setAction:(SEL)anAction
 {
-    [self setAlphaValue:(_isEnabled = isEnabled) ? 1.0 : 0.3];
+    _action = anAction;
 }
 
 /*!
-    Returns <code>YES</code> if the receiver responds to mouse events.
+    Returns the receiver's target action
 */
-- (BOOL)isEnabled
+- (SEL)action
 {
-    return _isEnabled;
+    return _action;
 }
 
 /*!
-    Sets the receiver's horizontal text alignment
-    @param anAlignment the receiver's alignment
+    Sets the receiver's target. The target receives action messages from the receiver.
+    @param aTarget the object that will receive the message specified by action
 */
-- (void)setAlignment:(CPTextAlignment)anAlignment
+- (void)setTarget:(id)aTarget
 {
-    _alignment = anAlignment;
+    _target = aTarget;
 }
 
 /*!
-    Returns the receiver's horizontal text alignment
+    Returns the receiver's target. The target receives action messages from the receiver.
 */
-- (CPTextAlignment)alignment
+- (id)target
 {
-    return _alignment;
+    return _target;
 }
 
 /*!
-    Sets the receiver's vertical text alignment
-    @param anAlignment the receiver's alignment
+    Causes <code>anAction</code> to be sent to <code>anObject</code>.
+    @param anAction the action to send
+    @param anObject the object to which the action will be sent
 */
-- (void)setVerticalAlignment:(CPVerticalTextAlignment)anAlignment
+- (void)sendAction:(SEL)anAction to:(id)anObject
 {
-    _verticalAlignment = anAlignment;
+    [CPApp sendAction:anAction to:anObject from:self];
 }
 
-/*!
-    Returns the receiver's vertical text alignment
-*/
-- (CPVerticalTextAlignment)verticalAlignment
+- (int)sendActionOn:(int)mask
 {
-    return _verticalAlignment;
-}
-
-/*!
-    Sets the receiver's line break mode.
-    @param anAlignment the receiver's line break mode.
-*/
-- (void)setLineBreakMode:(CPLineBreakMode)aLineBreakMode
-{
-    _lineBreakMode = aLineBreakMode;
-}
-
-/*!
-    Returns the receiver's line break mode.
-*/
-- (CPLineBreakMode)lineBreakMode
-{
-    return _lineBreakMode;
-}
-
-/*!
-    Sets the color of the receiver's text.
-*/
-- (void)setTextColor:(CPColor)aColor
-{
-    if (_textColor == aColor)
-        return;
+    var previousMask = _sendActionOn;
     
-    _textColor = aColor;
-
-#if PLATFORM(DOM)
-    _DOMElement.style.color = [aColor cssString];
-#endif
-}
-
-/*!
-    Returns the color of the receiver's text
-*/
-- (CPColor)textColor
-{
-    return _textColor;
-}
-
-/*!
-    Sets the receiver's font
-    @param aFont the font for the receiver
-*/
-- (void)setFont:(CPFont)aFont
-{
-    if (_font == aFont)
-        return;
+    _sendActionOn = mask;
     
-    _font = aFont;
-    
-#if PLATFORM(DOM)
-    _DOMElement.style.font = [_font ? _font : [CPFont systemFontOfSize:12.0] cssString];
-#endif
-}
-
-/*!
-    Returns the receiver's font
-*/
-- (CPFont)font
-{
-    return _font;
-}
-
-/*!
-    Sets the position of the button's image to <code>anImagePosition</code>.
-    @param anImagePosition the position for the button's image
-*/
-- (void)setImagePosition:(CPCellImagePosition)anImagePosition
-{
-    if (_imagePosition === anImagePosition)
-        return;
-    
-    _imagePosition = anImagePosition;
-}
-
-/*!
-    Returns the buton's image position
-*/
-- (CPCellImagePosition)imagePosition
-{
-    return _imagePosition;
-}
-
-/*!
-    Sets the button's images scaling method
-    @param anImageScaling the image scaling method
-*/
-- (void)setImageScaling:(CPImageScaling)anImageScaling
-{
-    if (_imageScaling === anImageScaling)
-        return;
-    
-    _imageScaling = anImageScaling;
-}
-
-/*!
-    Returns the button's image scaling method
-*/
-- (CPImageScaling)imageScaling
-{
-    return _imageScaling;
-}
-
-/*!
-    Sets the shadow for the receiver's text.
-    @param aTextShadow the text shadow
-*/
-- (void)setTextShadow:(CPShadow)aTextShadow
-{
-#if PLATFORM(DOM)
-    _DOMElement.style.textShadow = [_textShadow = aTextShadow cssString];
-#endif
-}
-
-/*!
-    Returns the receiver's text shadow
-*/
-- (CPShadow)textShadow
-{
-    return _textShadow;
+    return previousMask;
 }
 
 /*!
@@ -342,38 +225,26 @@ var CPControlBlackColor     = [CPColor blackColor];
     return _toolTip;
 }
 */
+
 /*!
-    Returns the receiver's target action
+    Returns whether the control can continuously send its action messages.
 */
-- (SEL)action
+- (BOOL)isContinuous
 {
-    return _action;
+    // Some subclasses should redefine this with CPLeftMouseDraggedMask
+    return (_sendActionOn & CPPeriodicMask) !== 0;
 }
 
 /*!
-    Sets the receiver's target action
-    @param anAction Sets the action message that gets sent to the target.
-*/
-- (void)setAction:(SEL)anAction
+    Sets whether the cell can continuously send its action messages.
+ */
+- (void)setContinuous:(BOOL)flag
 {
-    _action = anAction;
-}
-
-/*!
-    Returns the receiver's target. The target receives action messages from the receiver.
-*/
-- (id)target
-{
-    return _target;
-}
-
-/*!
-    Sets the receiver's target. The target receives action messages from the receiver.
-    @param aTarget the object that will receive the message specified by action
-*/
-- (void)setTarget:(id)aTarget
-{
-    _target = aTarget;
+    // Some subclasses should redefine this with CPLeftMouseDraggedMask
+    if (flag)
+        _sendActionOn |= CPPeriodicMask;
+    else 
+        _sendActionOn &= ~CPPeriodicMask;
 }
 
 - (BOOL)tracksMouseOutsideOfFrame
@@ -421,8 +292,16 @@ var CPControlBlackColor     = [CPColor blackColor];
     if ((_sendActionOn & (1 << type)) && isWithinFrame)
         [self sendAction:_action to:_target];
     
-    _trackingWasInFrame = isWithinFrame;
+    _trackingWasWithinFrame = isWithinFrame;
     _previousTrackingLocation = currentLocation;
+}
+
+- (void)performClick:(id)sender 
+{
+    [self highlight:YES];
+    [self setState:[self nextState]];
+    [self sendAction:[self action] to:[self target]];
+    [self highlight:NO];
 }
 
 - (unsigned)mouseDownFlags
@@ -432,6 +311,8 @@ var CPControlBlackColor     = [CPColor blackColor];
 
 - (BOOL)startTrackingAt:(CGPoint)aPoint
 {
+    [self highlight:YES];
+    
     return (_sendActionOn & CPPeriodicMask) || (_sendActionOn & CPLeftMouseDraggedMask);
 }
 
@@ -442,55 +323,15 @@ var CPControlBlackColor     = [CPColor blackColor];
 
 - (void)stopTracking:(CGPoint)lastPoint at:(CGPoint)aPoint mouseIsUp:(BOOL)mouseIsUp
 {
+    [self highlight:NO];
 }
 
 - (void)mouseDown:(CPEvent)anEvent
 {
-    if (!_isEnabled)
+    if (![self isEnabled])
         return;
     
     [self trackMouse:anEvent];
-}
-
-
-/*!
-    Causes <code>anAction</code> to be sent to <code>anObject</code>.
-    @param anAction the action to send
-    @param anObject the object to which the action will be sent
-*/
-- (void)sendAction:(SEL)anAction to:(id)anObject
-{
-    [CPApp sendAction:anAction to:anObject from:self];
-}
-
-- (int)sendActionOn:(int)mask
-{
-    var previousMask = _sendActionOn;
-    
-    _sendActionOn = mask;
-    
-    return previousMask;
-}
-
-/*!
-    Returns whether the control can continuously send its action messages.
-*/
-- (BOOL)isContinuous
-{
-    // Some subclasses should redefine this with CPLeftMouseDraggedMask
-    return (_sendActionOn & CPPeriodicMask) !== 0;
-}
-
-/*!
-    Sets whether the cell can continuously send its action messages.
- */
-- (void)setContinuous:(BOOL)flag
-{
-    // Some subclasses should redefine this with CPLeftMouseDraggedMask
-    if (flag)
-        _sendActionOn |= CPPeriodicMask;
-    else 
-        _sendActionOn &= ~CPPeriodicMask;
 }
 
 /*!
@@ -507,6 +348,9 @@ var CPControlBlackColor     = [CPColor blackColor];
 - (void)setObjectValue:(id)anObject
 {
     _value = anObject;
+    
+    [self setNeedsLayout];
+    [self setNeedsDisplay:YES];
 }
 
 /*!
@@ -560,7 +404,6 @@ var CPControlBlackColor     = [CPColor blackColor];
     [self setObjectValue:anObject];
 }
 
-
 /*!
     Returns the receiver's int value
 */
@@ -583,7 +426,7 @@ var CPControlBlackColor     = [CPColor blackColor];
 */
 - (CPString)stringValue
 {
-    return _value ? String(_value) : "";
+    return (_value === undefined || _value === nil) ? "" : String(_value);
 }
 
 /*!
@@ -593,7 +436,6 @@ var CPControlBlackColor     = [CPColor blackColor];
 {
     [self setObjectValue:anObject];
 }
-
 
 - (void)takeDoubleValueFrom:(id)sender
 {
@@ -635,44 +477,6 @@ var CPControlBlackColor     = [CPColor blackColor];
         [self setStringValue:[sender stringValue]];
 }
 
-
-- (void)setBackgroundColor:(CPColor)aColor
-{
-    _backgroundColors = [CPDictionary dictionary];
-    
-    [self setBackgroundColor:aColor forName:CPControlNormalBackgroundColor];
-    
-    [super setBackgroundColor:aColor];
-}
-
-- (void)setBackgroundColor:(CPColor)aColor forName:(CPString)aName
-{
-    if (!aColor)
-        [_backgroundColors removeObjectForKey:aName];
-    else
-        [_backgroundColors setObject:aColor forKey:aName];
-        
-    if (_currentBackgroundColorName == aName)
-        [self setBackgroundColorWithName:_currentBackgroundColorName];
-}
-
-- (CPColor)backgroundColorForName:(CPString)aName
-{
-    var backgroundColor = [_backgroundColors objectForKey:aName];
-    
-    if (!backgroundColor && aName != CPControlNormalBackgroundColor)
-        return [_backgroundColors objectForKey:CPControlNormalBackgroundColor];
-        
-    return backgroundColor;
-}
-
-- (void)setBackgroundColorWithName:(CPString)aName
-{
-    _currentBackgroundColorName = aName;
-    
-    [super setBackgroundColor:[self backgroundColorForName:aName]];
-}
-
 - (void)textDidBeginEditing:(CPNotification)note 
 {
     //this looks to prevent false propagation of notifications for other objects
@@ -700,28 +504,111 @@ var CPControlBlackColor     = [CPColor blackColor];
     [[CPNotificationCenter defaultCenter] postNotificationName:CPControlTextDidEndEditingNotification object:self userInfo:[CPDictionary dictionaryWithObject:[note object] forKey:"CPFieldEditor"]];
 }
 
-/*
-Ð doubleValue  
-Ð setDoubleValue:
-Ð intValue  
-Ð setIntValue:  
-Ð objectValue  
-Ð setObjectValue:  
-Ð stringValue  
-Ð setStringValue:  
-Ð setNeedsDisplay  
-Ð attributedStringValue  
-Ð setAttributedStringValue:  
-*/
+#define BRIDGE(UPPERCASE, LOWERCASE, ATTRIBUTENAME) \
+- (void)set##UPPERCASE:(id)aValue\
+{\
+[self setValue:aValue forThemeAttribute:ATTRIBUTENAME];\
+}\
+- (id)LOWERCASE\
+{\
+return [self valueForThemeAttribute:ATTRIBUTENAME];\
+}
+
+BRIDGE(Alignment, alignment, "alignment")
+BRIDGE(VerticalAlignment, verticalAlignment, "vertical-alignment")
+BRIDGE(LineBreakMode, lineBreakMode, "line-break-mode")
+BRIDGE(TextColor, textColor, "text-color")
+BRIDGE(Font, font, "font")
+BRIDGE(TextShadowColor, textShadowColor, "text-shadow-color")
+BRIDGE(TextShadowOffset, textShadowOffset, "text-shadow-offset")
+BRIDGE(ImagePosition, imagePosition, "image-position")
+BRIDGE(ImageScaling, imageScaling, "image-scaling")
+
+- (void)setEnabled:(BOOL)isEnabled
+{
+    if (isEnabled)
+        [self unsetThemeState:CPThemeStateDisabled];
+    else
+        [self setThemeState:CPThemeStateDisabled];
+}
+
+- (BOOL)isEnabled
+{
+    return ![self hasThemeState:CPThemeStateDisabled];
+}
+
+- (void)highlight:(BOOL)shouldHighlight
+{
+    [self setHighlighted:shouldHighlight];
+}
+
+- (void)setHighlighted:(BOOL)isHighlighted
+{
+    if (isHighlighted)
+        [self setThemeState:CPThemeStateHighlighted];
+    else
+        [self unsetThemeState:CPThemeStateHighlighted];
+}
+
+- (BOOL)isHighlighted
+{
+    return [self hasThemeState:CPThemeStateHighlighted];
+}
+
+- (CPView)createEphemeralSubviewNamed:(CPString)aViewName
+{
+    return nil;
+}
+
+- (CGRect)rectForEphemeralSubviewNamed:(CPString)aViewName
+{
+    return _CGRectMakeZero();
+}
+
+- (CPView)layoutEphemeralSubviewNamed:(CPString)aViewName 
+                           positioned:(CPWindowOrderingMode)anOrderingMode
+      relativeToEphemeralSubviewNamed:(CPString)relativeToViewName
+{
+    if (!_ephemeralSubviewsForNames)
+    {
+        _ephemeralSubviewsForNames = {};
+        _ephemeralSubviews = [CPSet set];
+    }
+    
+    var frame = [self rectForEphemeralSubviewNamed:aViewName];
+
+    if (frame && !_CGRectIsEmpty(frame))
+    {
+        if (!_ephemeralSubviewsForNames[aViewName])
+        {
+            _ephemeralSubviewsForNames[aViewName] = [self createEphemeralSubviewNamed:aViewName];
+        
+            [_ephemeralSubviews addObject:_ephemeralSubviewsForNames[aViewName]];
+        
+            if (_ephemeralSubviewsForNames[aViewName])
+                [self addSubview:_ephemeralSubviewsForNames[aViewName] positioned:anOrderingMode relativeTo:_ephemeralSubviewsForNames[relativeToViewName]];
+        }
+        
+        if (_ephemeralSubviewsForNames[aViewName])
+            [_ephemeralSubviewsForNames[aViewName] setFrame:frame];
+    }
+    else if (_ephemeralSubviewsForNames[aViewName])
+    {
+        [_ephemeralSubviewsForNames[aViewName] removeFromSuperview];
+        
+        [_ephemeralSubviews removeObject:_ephemeralSubviewsForNames[aViewName]];
+        delete _ephemeralSubviewsForNames[aViewName];
+    }
+    
+    return _ephemeralSubviewsForNames[aViewName];
+}
 
 @end
 
 var CPControlValueKey           = "CPControlValueKey",
+    CPControlControlStateKey    = @"CPControlControlStateKey",
     CPControlIsEnabledKey       = "CPControlIsEnabledKey",
-    CPControlAlignmentKey       = "CPControlAlignmentKey",
-    CPControlVerticalAlignmentKey   = @"CPControlVerticalAlignmentKey",
-    CPControlFontKey            = "CPControlFontKey",
-    CPControlTextColorKey       = "CPControlTextColorKey",
+    
     CPControlTargetKey          = "CPControlTargetKey",
     CPControlActionKey          = "CPControlActionKey",
     CPControlSendActionOnKey    = "CPControlSendActionOnKey";
@@ -738,23 +625,14 @@ var __Deprecated__CPImageViewImageKey   = @"CPImageViewImageKey";
 - (id)initWithCoder:(CPCoder)aCoder
 {
     self = [super initWithCoder:aCoder];
-    
+
     if (self)
     {
         [self setObjectValue:[aCoder decodeObjectForKey:CPControlValueKey]];
-        
-        if ([aCoder containsValueForKey:__Deprecated__CPImageViewImageKey])
-            [self setObjectValue:[aCoder decodeObjectForKey:_DeprecatedCPImageViewImageKey]];
 
-        [self setEnabled:[aCoder decodeBoolForKey:CPControlIsEnabledKey]];
-        
-        [self setAlignment:[aCoder decodeIntForKey:CPControlAlignmentKey]];
-        [self setVerticalAlignment:[aCoder decodeIntForKey:CPControlVerticalAlignmentKey]];
-        [self setFont:[aCoder decodeObjectForKey:CPControlFontKey]];
-        [self setTextColor:[aCoder decodeObjectForKey:CPControlTextColorKey]];
-        
         [self setTarget:[aCoder decodeObjectForKey:CPControlTargetKey]];
         [self setAction:[aCoder decodeObjectForKey:CPControlActionKey]];
+
         [self sendActionOn:[aCoder decodeIntForKey:CPControlSendActionOnKey]];
     }
     
@@ -767,28 +645,39 @@ var __Deprecated__CPImageViewImageKey   = @"CPImageViewImageKey";
 */
 - (void)encodeWithCoder:(CPCoder)aCoder
 {
+    var count = [_subviews count],
+        ephemeral
+        subviews = nil;
+
+    if (count > 0 && [_ephemeralSubviews count] > 0)
+    {
+        subviews = [_subviews.slice(0) copy];
+        
+        while (count--)
+            if ([_ephemeralSubviews containsObject:_subviews[count]])
+                _subviews.splice(count, 1);
+    }
+
     [super encodeWithCoder:aCoder];
-    
-    [aCoder encodeObject:_value forKey:CPControlValueKey];
-    
-    [aCoder encodeBool:_isEnabled forKey:CPControlIsEnabledKey];
-    
-    [aCoder encodeInt:_alignment forKey:CPControlAlignmentKey];
-    [aCoder encodeInt:_verticalAlignment forKey:CPControlVerticalAlignmentKey];
-    
-    [aCoder encodeObject:_font forKey:CPControlFontKey];
-    [aCoder encodeObject:_textColor forKey:CPControlTextColorKey];
-    
-    [aCoder encodeConditionalObject:_target forKey:CPControlTargetKey];
-    [aCoder encodeObject:_action forKey:CPControlActionKey];
-    
+
+    if (subviews)
+        _subviews = subviews;
+
+    if (_value !== nil)
+        [aCoder encodeObject:_value forKey:CPControlValueKey];
+
+    if (_target !== nil)
+        [aCoder encodeConditionalObject:_target forKey:CPControlTargetKey];
+
+    if (_action !== NULL)
+        [aCoder encodeObject:_action forKey:CPControlActionKey];
+
     [aCoder encodeInt:_sendActionOn forKey:CPControlSendActionOnKey];
 }
 
 @end
 
 var _CPControlSizeIdentifiers               = [],
-    _CPControlCachedThreePartImages         = {},
     _CPControlCachedColorWithPatternImages  = {},
     _CPControlCachedThreePartImagePattern   = {};
 
@@ -824,36 +713,6 @@ function _CPControlColorWithPatternImage(sizes, aClassName)
     return color;
 }
 
-function _CPControlThreePartImages(sizes, aClassName)
-{
-    var index = 1,
-        count = arguments.length,
-        identifier = "";
-    
-    for (; index < count; ++index)
-        identifier += arguments[index];
-
-    var images = _CPControlCachedThreePartImages[identifier];
-    
-    if (!images)
-    {
-        var bundle = [CPBundle bundleForClass:[CPControl class]],
-            path = aClassName + "/" + identifier;
-        
-        sizes = sizes[identifier];
-
-        images = [
-                    [[CPImage alloc] initWithContentsOfFile:[bundle pathForResource:path + "0.png"] size:sizes[0]],
-                    [[CPImage alloc] initWithContentsOfFile:[bundle pathForResource:path + "1.png"] size:sizes[1]],
-                    [[CPImage alloc] initWithContentsOfFile:[bundle pathForResource:path + "2.png"] size:sizes[2]]
-                ];
-                
-        _CPControlCachedThreePartImages[identifier] = images;
-    }
-    
-    return images;
-}
-
 function _CPControlThreePartImagePattern(isVertical, sizes, aClassName)
 {
     var index = 2,
@@ -883,4 +742,3 @@ function _CPControlThreePartImagePattern(isVertical, sizes, aClassName)
     
     return color;
 }
-

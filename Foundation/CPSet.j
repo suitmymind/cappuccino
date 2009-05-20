@@ -14,7 +14,9 @@
 @import "CPNumber.j"
 @import "CPEnumerator.j"
 
-
+/*!
+    @ingroup foundation
+*/
 @implementation CPSet : CPObject
 {
     Object      _contents;
@@ -68,7 +70,7 @@
         argLength = arguments.length,
         i = 2;
 
-    for(; i < argLength && (argument = arguments[i]) != nil; ++i)
+    for(; i < argLength && ((argument = arguments[i]) !== nil); ++i)
         [set addObject:argument];
     
     return set;
@@ -165,7 +167,7 @@
     
     for (var property in contents)
     {
-        if (_contents.hasOwnProperty(property))
+        if (contents.hasOwnProperty(property))
         {
             if (shouldCopyItems)
                 [self addObject:[contents[property] copy]];

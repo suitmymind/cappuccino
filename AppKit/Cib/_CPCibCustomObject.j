@@ -14,6 +14,11 @@ var _CPCibCustomObjectClassName = @"_CPCibCustomObjectClassName";
     return _className;
 }
 
+- (CPString)description
+{
+    return [super description] + " (" + [self customClassName] + ')';
+}
+
 @end
 
 @implementation _CPCibCustomObject (CPCoding)
@@ -36,10 +41,12 @@ var _CPCibCustomObjectClassName = @"_CPCibCustomObjectClassName";
 - (id)_cibInstantiate
 {
     var theClass = CPClassFromString(_className);
-    
+
+#if DEBUG    
     if (!theClass)
         CPLog("Unknown class \"" + _className + "\" in cib file");
-        
+#endif
+
     if (theClass === [CPApplication class])
         return [CPApplication sharedApplication];
     

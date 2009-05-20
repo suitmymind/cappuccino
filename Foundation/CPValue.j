@@ -24,7 +24,9 @@
 @import "CPCoder.j"
 
 
-/*! @class CPValue
+/*! 
+    @ingroup foundation
+    @class CPValue
     The class can be subclassed to hold different types of scalar values.
 */
 @implementation CPValue : CPObject
@@ -115,7 +117,7 @@ function CPJSObjectCreateJSON(aJSObject)
     // typeof new Number() and new String() gives you "object", 
     // so valueof in those cases.
     var type = typeof aJSObject,
-        valueOf = aJSObject.valueOf(),
+        valueOf = aJSObject ? aJSObject.valueOf() : null,
         typeValueOf = typeof valueOf;
     
     if (type != typeValueOf)
