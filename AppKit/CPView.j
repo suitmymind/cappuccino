@@ -143,8 +143,6 @@ var DOMElementPrototype         = nil,
     BOOL                _postsBoundsChangedNotifications;
     BOOL                _inhibitFrameAndBoundsChangedNotifications;
     
-    CPString            _displayHash;
-    
 #if PLATFORM(DOM)
     DOMElement          _DOMElement;
     DOMElement          _DOMContentsElement;
@@ -241,8 +239,6 @@ var DOMElementPrototype         = nil,
         _opacity = 1.0;
         _isHidden = NO;
         _hitTests = YES;
-
-        _displayHash = [self hash];
 
 #if PLATFORM(DOM)
         _DOMElement = DOMElementPrototype.cloneNode(false);
@@ -1208,7 +1204,7 @@ var DOMElementPrototype         = nil,
 
         amount = 0 - _DOMImageParts.length;
     }
-    
+
     if (amount > 0)
         while (amount--)
         {
@@ -1236,16 +1232,16 @@ var DOMElementPrototype         = nil,
     else
     {
         var slices = [patternImage imageSlices],
-            count = slices.length,
+            count = MIN(_DOMImageParts.length, slices.length),
             frameSize = _frame.size;
-        
+
         while (count--)
         {
             var image = slices[count],
                 size = _DOMImageSizes[count] = image ? [image size] : _CGSizeMakeZero();
             
             CPDOMDisplayServerSetStyleSize(_DOMImageParts[count], size.width, size.height);
-            
+
             _DOMImageParts[count].style.background = image ? "url(\"" + [image filename] + "\")" : "";
         }
         
@@ -1535,13 +1531,13 @@ setBoundsOrigin:
 - (void)setNeedsDisplayInRect:(CPRect)aRect
 {
 #if PLATFORM(DOM)
-    var hash = [[self class] hash],
-        hasCustomDrawRect = CustomDrawRectViews[hash];
+    var UID = [[self class] UID],
+        hasCustomDrawRect = CustomDrawRectViews[UID];
     
     if (!hasCustomDrawRect && typeof hasCustomDrawRect === "undefined")
     {
         hasCustomDrawRect = [self methodForSelector:@selector(drawRect:)] != [CPView instanceMethodForSelector:@selector(drawRect:)];
-        CustomDrawRectViews[hash] = hasCustomDrawRect;
+        CustomDrawRectViews[UID] = hasCustomDrawRect;
     }
 
     if (!hasCustomDrawRect)
@@ -1666,13 +1662,13 @@ setBoundsOrigin:
     _needsLayout = YES;
     
 #if PLATFORM(DOM)
-    var hash = [[self class] hash],
-        hasCustomLayoutSubviews = CustomLayoutSubviewsViews[hash];
+    var UID = [[self class] UID],
+        hasCustomLayoutSubviews = CustomLayoutSubviewsViews[UID];
     
     if (hasCustomLayoutSubviews === undefined)
     {
         hasCustomLayoutSubviews = [self methodForSelector:@selector(layoutSubviews)] != [CPView instanceMethodForSelector:@selector(layoutSubviews)];
-        CustomLayoutSubviewsViews[hash] = hasCustomLayoutSubviews;
+        CustomLayoutSubviewsViews[UID] = hasCustomLayoutSubviews;
     }
 
     if (!hasCustomLayoutSubviews)
@@ -2107,6 +2103,9 @@ setBoundsOrigin:
     for (var attributeName in _themeAttributes)
         if (_themeAttributes.hasOwnProperty(attributeName))
             [_themeAttributes[attributeName] setParentAttribute:[theme _attributeWithName:attributeName forClass:themeClass]];
+
+    [self setNeedsLayout];
+    [self setNeedsDisplay:YES];
 }
 
 - (CPDictionary)_themeAttributeDictionary
@@ -2253,7 +2252,6 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
             //_subviews[index]._superview = self;
         }
 #endif
-        _displayHash = [self hash];
 
         if ([aCoder containsValueForKey:CPViewIsHiddenKey])
             [self setHidden:[aCoder decodeBoolForKey:CPViewIsHiddenKey]];
