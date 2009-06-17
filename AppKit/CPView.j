@@ -178,6 +178,9 @@ var DOMElementPrototype         = nil,
     JSObject            _themeAttributes;
     unsigned            _themeState;
 
+    JSObject            _ephemeralSubviewsForNames;
+    CPSet               _ephereralSubviews;
+
     // Key View Support
     CPView              _nextKeyView;
     CPView              _previousKeyView;
@@ -1465,7 +1468,7 @@ setBoundsOrigin:
 */
 - (void)registerForDraggedTypes:(CPArray)pasteboardTypes
 {
-    if (!pasteboardTypes)
+    if (!pasteboardTypes || ![pasteboardTypes count])
         return;
 
     var theWindow = [self window];
@@ -2180,6 +2183,54 @@ setBoundsOrigin:
     return [_themeAttributes[aName] valueForState:_themeState];
 }
 
+- (CPView)createEphemeralSubviewNamed:(CPString)aViewName
+{
+    return nil;
+}
+
+- (CGRect)rectForEphemeralSubviewNamed:(CPString)aViewName
+{
+    return _CGRectMakeZero();
+}
+
+- (CPView)layoutEphemeralSubviewNamed:(CPString)aViewName 
+                           positioned:(CPWindowOrderingMode)anOrderingMode
+      relativeToEphemeralSubviewNamed:(CPString)relativeToViewName
+{
+    if (!_ephemeralSubviewsForNames)
+    {
+        _ephemeralSubviewsForNames = {};
+        _ephemeralSubviews = [CPSet set];
+    }
+
+    var frame = [self rectForEphemeralSubviewNamed:aViewName];
+
+    if (frame && !_CGRectIsEmpty(frame))
+    {
+        if (!_ephemeralSubviewsForNames[aViewName])
+        {
+            _ephemeralSubviewsForNames[aViewName] = [self createEphemeralSubviewNamed:aViewName];
+
+            [_ephemeralSubviews addObject:_ephemeralSubviewsForNames[aViewName]];
+
+            if (_ephemeralSubviewsForNames[aViewName])
+                [self addSubview:_ephemeralSubviewsForNames[aViewName] positioned:anOrderingMode relativeTo:_ephemeralSubviewsForNames[relativeToViewName]];
+        }
+
+        if (_ephemeralSubviewsForNames[aViewName])
+            [_ephemeralSubviewsForNames[aViewName] setFrame:frame];
+    }
+    else if (_ephemeralSubviewsForNames[aViewName])
+    {
+        [_ephemeralSubviewsForNames[aViewName] removeFromSuperview];
+
+        [_ephemeralSubviews removeObject:_ephemeralSubviewsForNames[aViewName]];
+        delete _ephemeralSubviewsForNames[aViewName];
+    }
+
+    return _ephemeralSubviewsForNames[aViewName];
+}
+
 @end
 
 var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
@@ -2230,6 +2281,10 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
         _subviews = [aCoder decodeObjectForKey:CPViewSubviewsKey] || [];
         _superview = [aCoder decodeObjectForKey:CPViewSuperviewKey];
         
+        // FIXME: Should we encode/decode this?
+        _registeredDraggedTypes = [CPSet set];
+        _registeredDraggedTypesArray = [];
+
         _autoresizingMask = [aCoder decodeIntForKey:CPViewAutoresizingMaskKey] || CPViewNotSizable;
         _autoresizesSubviews = ![aCoder containsValueForKey:CPViewAutoresizesSubviewsKey] || [aCoder decodeBoolForKey:CPViewAutoresizesSubviewsKey];
 
@@ -2282,6 +2337,7 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
         }
 
         [self setNeedsDisplay:YES];
+        [self setNeedsLayout];
     }
 
     return self;
@@ -2305,8 +2361,20 @@ var CPViewAutoresizingMaskKey       = @"CPViewAutoresizingMask",
     if (_window !== nil)
         [aCoder encodeConditionalObject:_window forKey:CPViewWindowKey];
 
-    if (_subviews.length > 0)
-        [aCoder encodeObject:_subviews forKey:CPViewSubviewsKey];
+    var count = [_subviews count],
+        encodedSubviews = _subviews;
+
+    if (count > 0 && [_ephemeralSubviews count] > 0)
+    {
+        encodedSubviews = [encodedSubviews copy];
+
+        while (count--)
+            if ([_ephemeralSubviews containsObject:encodedSubviews[count]])
+                encodedSubviews.splice(count, 1);
+    }
+
+    if (encodedSubviews.length > 0)
+        [aCoder encodeObject:encodedSubviews forKey:CPViewSubviewsKey];
 
     // This will come out nil on the other side with decodeObjectForKey:
     if (_superview !== nil)
