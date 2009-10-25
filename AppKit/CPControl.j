@@ -178,7 +178,7 @@ var CPControlBlackColor     = [CPColor blackColor];
 }
 
 /*!
-    Causes <code>anAction</code> to be sent to <code>anObject</code>.
+    Causes \c anAction to be sent to \c anObject.
     @param anAction the action to send
     @param anObject the object to which the action will be sent
 */
@@ -291,6 +291,15 @@ var CPControlBlackColor     = [CPColor blackColor];
     
     _trackingWasWithinFrame = isWithinFrame;
     _previousTrackingLocation = currentLocation;
+}
+
+- (void)setState:(int)state
+{
+}
+
+- (int)nextState
+{
+    return 0;
 }
 
 - (void)performClick:(id)sender 

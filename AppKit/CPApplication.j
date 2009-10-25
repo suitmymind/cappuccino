@@ -29,6 +29,8 @@
 @import "CPDocumentController.j"
 @import "CPThemeBlend.j"
 @import "CPCibLoading.j"
+@import "CPPlatform.j"
+
 
 var CPMainCibFile               = @"CPMainCibFile",
     CPMainCibFileHumanFriendly  = @"Main cib file base name";
@@ -49,7 +51,7 @@ CPRunContinuesResponse  = -1002;
     CPApplication is THE way to start up the Cappucino framework for your application to use.
     Every GUI application has exactly one instance of CPApplication (or of a custom subclass of
     CPApplication). Your program's main() function can create that instance by calling the
-    <code>CPApplicationMain</code> function. A simple example looks like this:
+    \c CPApplicationMain function. A simple example looks like this:
     
     <pre>
     function main(args, namedArgs)
@@ -84,6 +86,7 @@ CPRunContinuesResponse  = -1002;
     
     //
     id                      _delegate;
+    BOOL                    _finishedLaunching;
     
     CPDictionary            _namedArgs;
     CPArray                 _args;
@@ -105,7 +108,7 @@ CPRunContinuesResponse  = -1002;
 
 /*!
     Initializes the Document based application with basic menu functions.
-    Functions are <code>New, Open, Undo, Redo, Save, Cut, Copy, Paste</code>.
+    Functions are \c New, \c Open, \c Undo, \c Redo, \c Save, \c Cut, \c Copy, \c Paste.
     @return the initialized application
 */
 - (id)init
@@ -235,10 +238,10 @@ CPRunContinuesResponse  = -1002;
 }
 
 /*!
-    This method is called by <code>run</code> before the event loop begins.
+    This method is called by \c -run before the event loop begins.
     When it successfully completes, it posts the notification
     CPApplicationDidFinishLaunchingNotification. If you override
-    <code>finishLaunching</code>, the subclass method should invoke the superclass method.
+    \c -finishLaunching, the subclass method should invoke the superclass method.
 */
 - (void)finishLaunching
 {
@@ -266,19 +269,42 @@ CPRunContinuesResponse  = -1002;
     [defaultCenter
         postNotificationName:CPApplicationWillFinishLaunchingNotification
         object:self];
-    
-    if (_documentController)
+
+    var filename = window.cpOpeningFilename && window.cpOpeningFilename(),
+        needsUntitled = !!_documentController;
+
+    if ([filename length])
+    {
+        needsUntitled = ![self _openFile:filename];
+    }
+
+    if (needsUntitled && [_delegate respondsToSelector: @selector(applicationShouldOpenUntitledFile:)])
+        needsUntitled = [_delegate applicationShouldOpenUntitledFile:self];
+
+    if (needsUntitled)
         [_documentController newDocument:self];
     
     [defaultCenter
         postNotificationName:CPApplicationDidFinishLaunchingNotification
         object:self];
-    
+
     [[CPRunLoop currentRunLoop] limitDateForMode:CPDefaultRunLoopMode];
+
+    _finishedLaunching = YES;
+}
+
+- (void)terminate:(id)aSender
+{
+    [CPPlatform terminateApplication];
+}
+
+- (void)activateIgnoringOtherApps:(BOOL)shouldIgnoreOtherApps
+{
+    [CPPlatform activateIgnoringOtherApps:shouldIgnoreOtherApps];
 }
 
 /*!
-    Calls <code>finishLaunching</code> method which results in starting
+    Calls \c -finishLaunching method which results in starting
     the main event loop.
 */
 - (void)run
@@ -288,7 +314,7 @@ CPRunContinuesResponse  = -1002;
 
 // Managing the Event Loop
 /*!
-    Starts a modal event loop for <code>aWindow</code>
+    Starts a modal event loop for \c aWindow
     @param aWindow the window to start the event loop for
 */
 - (void)runModalForWindow:(CPWindow)aWindow
@@ -297,8 +323,8 @@ CPRunContinuesResponse  = -1002;
 }
 
 /*!
-    Stops the event loop started by <code>runModalForWindow:</code> and
-    sets the code that <code>runModalForWindow:</code> will return.
+    Stops the event loop started by \c -runModalForWindow: and
+    sets the code that \c -runModalForWindow: will return.
     @param aCode the return code for the modal event
 */
 - (void)stopModalWithCode:(int)aCode
@@ -339,7 +365,7 @@ CPRunContinuesResponse  = -1002;
 }
 
 /*!
-    Aborts the event loop started by <code>runModalForWindow:</code>
+    Aborts the event loop started by \c -runModalForWindow:
 */
 - (void)abortModal
 {
@@ -347,7 +373,7 @@ CPRunContinuesResponse  = -1002;
 }
 
 /*!
-    Sets up a modal session with <code>theWindow</code>.
+    Sets up a modal session with \c theWindow.
     @param aWindow the window to set up the modal session for
 */
 - (CPModalSession)beginModalSessionForWindow:(CPWindow)aWindow
@@ -376,7 +402,7 @@ CPRunContinuesResponse  = -1002;
 
 /*!
     Returns the window for the current modal session. If there is no
-    modal session, it returns <code>nil</code>.
+    modal session, it returns \c nil.
 */
 - (CPWindow)modalWindow
 {
@@ -391,7 +417,7 @@ CPRunContinuesResponse  = -1002;
 {
     if ([_mainMenu performKeyEquivalent:anEvent])
         return YES;
-    
+
     return NO;
 }
 
@@ -401,6 +427,8 @@ CPRunContinuesResponse  = -1002;
 */
 - (void)sendEvent:(CPEvent)anEvent
 {
+    _currentEvent = anEvent;
+
     // Check if this is a candidate for key equivalent...
     if ([anEvent type] == CPKeyDown &&
         [anEvent modifierFlags] & (CPCommandKeyMask | CPControlKeyMask) && 
@@ -444,7 +472,7 @@ CPRunContinuesResponse  = -1002;
 }
 
 /*!
-    Returns the CPWindow object corresponding to <code>aWindowNumber</code>.
+    Returns the CPWindow object corresponding to \c aWindowNumber.
 */
 - (CPWindow)windowWithWindowNumber:(int)aWindowNumber
 {
@@ -474,7 +502,18 @@ CPRunContinuesResponse  = -1002;
 */
 - (void)setMainMenu:(CPMenu)aMenu
 {
-    _mainMenu = aMenu;
+    if ([aMenu _menuName] === "CPMainMenu")
+    {
+        if (_mainMenu === aMenu)
+            return;
+
+        _mainMenu = aMenu;
+
+        if ([CPPlatform supportsNativeMainMenu])
+            window.cpSetMainMenu(_mainMenu);
+    }
+    else
+        [aMenu _setMenuName:@"CPMainMenu"];
 }
 
 - (void)orderFrontColorPanel:(id)aSender
@@ -500,7 +539,7 @@ CPRunContinuesResponse  = -1002;
     @param anAction the action to perform.
     @param anObject the argument for the action
     method
-    @return <code>YES</code> if the action was performed
+    @return \c YES if the action was performed
 */
 - (BOOL)tryToPerform:(SEL)anAction with:(id)anObject
 {
@@ -525,7 +564,7 @@ CPRunContinuesResponse  = -1002;
     @param anAction the action to send
     @param aTarget the target for the action
     @param aSender the action sender
-    @return <code>YES</code>
+    @return \c YES
 */
 - (BOOL)sendAction:(SEL)anAction to:(id)aTarget from:(id)aSender
 {
@@ -541,12 +580,12 @@ CPRunContinuesResponse  = -1002;
 
 /*!
     Finds a target for the specified action. If the
-    action is <code>nil</code>, returns <code>nil</code>.
-    If the target is not <code>nil</code>, <code>aTarget</code> is
-    returned. Otherwise, it calls <code>targetForAction:</code>
+    action is \c nil, returns \c nil.
+    If the target is not \c nil, \c aTarget is
+    returned. Otherwise, it calls \c -targetForAction:
     to search for a target.
     @param anAction the action to find a target for
-    @param aTarget if not <code>nil</code>, this will be returned
+    @param aTarget if not \c nil, this will be returned
     @aSender not used
     @return a target for the action
 */
@@ -574,7 +613,7 @@ CPRunContinuesResponse  = -1002;
     </ol>
     @param aWindow the window to search for a target
     @param anAction the action to find a responder to
-    @return the object that responds to the action, or <code>nil</code>
+    @return the object that responds to the action, or \c nil
     if no matching target was found
     @ignore
 */
@@ -626,7 +665,7 @@ CPRunContinuesResponse  = -1002;
         <li>the document controller</li>
     </ol>
     @param anAction the action to handle
-    @return a target that can respond, or <code>nil</code>
+    @return a target that can respond, or \c nil
     if no match could be found
 */
 - (id)targetForAction:(SEL)anAction
@@ -668,6 +707,11 @@ CPRunContinuesResponse  = -1002;
     _eventListeners.push(_CPEventListenerMake(aMask, function (anEvent) { objj_msgSend(aTarget, aSelector, anEvent); }));
 }
 
+- (CPEvent)currentEvent
+{
+    return _currentEvent;
+}
+
 // Managing Sheets
 
 /*!
@@ -680,8 +724,39 @@ CPRunContinuesResponse  = -1002;
 */
 - (void)beginSheet:(CPWindow)aSheet modalForWindow:(CPWindow)aWindow modalDelegate:(id)aModalDelegate didEndSelector:(SEL)aDidEndSelector contextInfo:(id)aContextInfo
 {    
+    var styleMask = [aSheet styleMask];
+    if (!(styleMask & CPDocModalWindowMask))
+    {
+        [CPException raise:CPInternalInconsistencyException reason:@"Currently only CPDocModalWindowMask style mask is supported for attached sheets"];
+        return;
+    }
+    
     [aWindow _attachSheet:aSheet modalDelegate:aModalDelegate didEndSelector:aDidEndSelector contextInfo:aContextInfo];
 }
+
+- (void)endSheet:(CPWindow)sheet returnCode:(int)returnCode
+{
+    var count = [_windows count];
+    
+    while (--count >= 0)
+    {
+        var aWindow = [_windows objectAtIndex:count];
+        var context = aWindow._sheetContext;
+    
+        if (context != nil && context["sheet"] === sheet)
+        {
+            context["returnCode"] = returnCode; 
+            [aWindow _detachSheetWindow];
+            return;
+        }
+    }
+}
+
+- (void)endSheet:(CPWindow)sheet
+{
+   [self endSheet:sheet returnCode:0];
+}
+
 
 - (CPArray)arguments
 {
@@ -731,6 +806,20 @@ CPRunContinuesResponse  = -1002;
     return _namedArgs;
 }
 
+- (BOOL)_openFile:(CPString)aFilename
+{
+    if (_delegate && [_delegate respondsToSelector:@selector(application:openFile:)])
+        return [_delegate application:self openFile:aFilename];
+    else
+        return [_documentController openDocumentWithContentsOfURL:aFilename display:YES error:NULL];
+}
+
+- (void)_didResignActive
+{
+    if (self._activeMenu)
+        [self._activeMenu cancelTracking];
+}
+
 @end
 
 var _CPModalSessionMake = function(aWindow, aStopCode)
@@ -756,7 +845,7 @@ var _CPRunModalLoop = function(anEvent)
 
 /*!
     Starts the GUI and Cappuccino frameworks. This function should be
-    called from the <code>main()</code> function of your program.
+    called from the \c main() function of your program.
     @class CPApplication
     @return void
 */
@@ -772,14 +861,18 @@ function CPApplicationMain(args, namedArgs)
     [principalClass sharedApplication];
 
     //FIXME?
-    if (!args && !namedArgs)
+    if (!args)
     {
-        var args = [CPApp arguments],
-            searchParams = window.location.search.substring(1).split("&");
-            namedArgs = [CPDictionary dictionary];
+        var args = [CPApp arguments];
 
         if([args containsObject:"debug"])
             CPLogRegister(CPLogPopup);
+    }
+
+    if (!namedArgs)
+    {
+        var searchParams = window.location.search.substring(1).split("&");
+            namedArgs = [CPDictionary dictionary];
 
         for(var i=0; i<searchParams.length; i++)
         {
@@ -805,7 +898,7 @@ var _CPAppBootstrapperActions = nil;
 
 + (void)actions
 {
-    return [@selector(loadDefaultTheme), @selector(loadMainCibFile)];
+    return [@selector(bootstrapPlatform), @selector(loadDefaultTheme), @selector(loadMainCibFile)];
 }
 
 + (void)performActions
@@ -822,6 +915,11 @@ var _CPAppBootstrapperActions = nil;
     }
 
     [CPApp run];
+}
+
++ (BOOL)bootstrapPlatform
+{
+    return [CPPlatform bootstrap];
 }
 
 + (BOOL)loadDefaultTheme

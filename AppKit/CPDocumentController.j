@@ -24,6 +24,7 @@
 @import <Foundation/CPBundle.j>
 
 @import "CPDocument.j"
+@import "CPOpenPanel.j";
 
 
 var CPSharedDocumentController = nil;
@@ -78,7 +79,7 @@ var CPSharedDocumentController = nil;
     method searches documents already open. It does not
     open the document at the URL if it is not already open.
     @param aURL the url of the document
-    @return the document, or <code>nil</code> if such a document is not open
+    @return the document, or \c nil if such a document is not open
 */
 - (CPDocument)documentForURL:(CPURL)aURL
 {
@@ -138,11 +139,11 @@ var CPSharedDocumentController = nil;
 - (CPDocument)openDocumentWithContentsOfURL:(CPURL)anAbsoluteURL display:(BOOL)shouldDisplay error:(CPError)anError
 {
     var result = [self documentForURL:anAbsoluteURL];
-    
+
     if (!result)
     {
         var type = [self typeForContentsOfURL:anAbsoluteURL error:anError];
-        
+
         result = [self makeDocumentWithContentsOfURL:anAbsoluteURL ofType:type delegate:self didReadSelector:@selector(document:didRead:contextInfo:) contextInfo:[CPDictionary dictionaryWithObject:shouldDisplay forKey:@"shouldDisplay"]];
     }
     else if (shouldDisplay)
@@ -157,7 +158,7 @@ var CPSharedDocumentController = nil;
     @param anAbsoluteURL the document URL
     @param absoluteContentsURL the location of the document's contents
     @param anError not used
-    @return the loaded document or <code>nil</code> if there was an error
+    @return the loaded document or \c nil if there was an error
 */
 - (CPDocument)reopenDocumentForURL:(CPURL)anAbsoluteURL withContentsOfURL:(CPURL)absoluteContentsURL error:(CPError)anError
 {
@@ -187,7 +188,7 @@ var CPSharedDocumentController = nil;
     @param aDelegate receives a callback after the load has completed
     @param aSelector the selector to invoke for the callback
     @param aContextInfo an object passed as an argument for the callback
-    @return a new document or <code>nil</code> if there was an error
+    @return a new document or \c nil if there was an error
 */
 - (CPDocument)makeDocumentForURL:(CPURL)anAbsoluteURL withContentsOfURL:(CPURL)absoluteContentsURL ofType:(CPString)aType delegate:(id)aDelegate didReadSelector:(SEL)aSelector contextInfo:(id)aContextInfo
 {
@@ -219,6 +220,20 @@ var CPSharedDocumentController = nil;
     [self openUntitledDocumentOfType:[[_documentTypes objectAtIndex:0] objectForKey:@"CPBundleTypeName"] display:YES];
 }
 
+-(void)openDocument:(id)aSender
+{
+    var openPanel = [CPOpenPanel openPanel];
+
+    [openPanel runModal];
+
+    var URLs = [openPanel URLs],
+        index = 0,
+        count = [URLs count];
+
+    for (; index < count; ++index)
+        [self openDocumentWithContentsOfURL:[CPURL URLWithString:URLs[index]] display:YES error:nil];
+}
+
 // Managing Documents
 
 /*!
@@ -231,7 +246,7 @@ var CPSharedDocumentController = nil;
 }
 
 /*!
-    Adds <code>aDocument</code> under the control of the receiver.
+    Adds \c aDocument under the control of the receiver.
     @param aDocument the document to add
 */
 - (void)addDocument:(CPDocument)aDocument
@@ -240,7 +255,7 @@ var CPSharedDocumentController = nil;
 }
 
 /*!
-    Removes <code>aDocument</code> from the control of the receiver.
+    Removes \c aDocument from the control of the receiver.
     @param aDocument the document to remove
 */
 - (void)removeDocument:(CPDocument)aDocument
@@ -296,9 +311,9 @@ var CPSharedDocumentController = nil;
 }
 
 /*!
-    Returns the CPDocument subclass associated with <code>aType</code>.
+    Returns the CPDocument subclass associated with \c aType.
     @param aType the type of document
-    @return a Cappuccino Class object, or <code>nil</code> if no match was found
+    @return a Cappuccino Class object, or \c nil if no match was found
 */
 - (Class)documentClassForType:(CPString)aType
 {

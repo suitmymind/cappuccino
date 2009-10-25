@@ -100,7 +100,7 @@ var _CPWindowViewResizeIndicatorImage = nil;
 - (void)mouseDown:(CPEvent)anEvent
 {
     var theWindow = [self window];
-    
+
     if ((_styleMask & CPResizableWindowMask) && _resizeIndicator)
     {
         // FIXME: This should be better
@@ -135,17 +135,28 @@ var _CPWindowViewResizeIndicatorImage = nil;
     }
     
     else if (type === CPLeftMouseDragged)
-        [theWindow setFrameSize:CGSizeMake(CGRectGetWidth(_resizeFrame) + location.x - CGRectGetMinX(_resizeFrame), CGRectGetHeight(_resizeFrame) + location.y - CGRectGetMinY(_resizeFrame))];
+    {	
+    	var newSize = CGSizeMake(CGRectGetWidth(_resizeFrame) + location.x - CGRectGetMinX(_resizeFrame), CGRectGetHeight(_resizeFrame) + location.y - CGRectGetMinY(_resizeFrame));
+        
+        if (theWindow._isSheet && theWindow._parentView && (theWindow._frame.size.width !== newSize.width))
+    	[theWindow._parentView _setAttachedSheetFrameOrigin];
+		
+		[theWindow setFrameSize:newSize];
+    }
     
     [CPApp setTarget:self selector:@selector(trackResizeWithEvent:) forNextEventMatchingMask:CPLeftMouseDraggedMask | CPLeftMouseUpMask untilDate:nil inMode:nil dequeue:YES];
 }
 
 - (CGPoint)_pointWithinScreenFrame:(CGPoint)aPoint
 {
+    // FIXME: this is WRONG, all of this is WRONG
+    if (![CPPlatform isBrowser])
+        return aPoint;
+
     var visibleFrame = _cachedScreenFrame;
 
     if (!visibleFrame)
-        visibleFrame = [[CPDOMWindowBridge sharedDOMWindowBridge] visibleFrame];
+        visibleFrame = [[CPPlatformWindow primaryPlatformWindow] visibleFrame];
 
     var restrictedPoint = CGPointMake(0, 0);
 
@@ -158,22 +169,24 @@ var _CPWindowViewResizeIndicatorImage = nil;
 - (void)trackMoveWithEvent:(CPEvent)anEvent
 {
     var type = [anEvent type];
-        
+
     if (type === CPLeftMouseUp)
     {
         _cachedScreenFrame = nil;
         return;
     }
+
     else if (type === CPLeftMouseDown)
     {
-        _mouseDraggedPoint = [[self window] convertBaseToBridge:[anEvent locationInWindow]];
-        _cachedScreenFrame = [[CPDOMWindowBridge sharedDOMWindowBridge] visibleFrame];
+        _mouseDraggedPoint = [[self window] convertBaseToGlobal:[anEvent locationInWindow]];
+        _cachedScreenFrame = [[CPPlatformWindow primaryPlatformWindow] visibleFrame];
     }
+
     else if (type === CPLeftMouseDragged)
     {
         var theWindow = [self window],
             frame = [theWindow frame],
-            location = [theWindow convertBaseToBridge:[anEvent locationInWindow]],
+            location = [theWindow convertBaseToGlobal:[anEvent locationInWindow]],
             origin = [self _pointWithinScreenFrame:CGPointMake(_CGRectGetMinX(frame) + (location.x - _mouseDraggedPoint.x), 
                                                                _CGRectGetMinY(frame) + (location.y - _mouseDraggedPoint.y))];
 
@@ -322,7 +335,7 @@ var _CPWindowViewResizeIndicatorImage = nil;
     {
         var contentRect = [self convertRect:[[theWindow contentView] frame] toView:nil];
 
-        contentRect.origin = [theWindow convertBaseToBridge:contentRect.origin];
+        contentRect.origin = [theWindow convertBaseToGlobal:contentRect.origin];
 
         [self setAutoresizesSubviews:NO];
         [theWindow setFrame:[theWindow frameRectForContentRect:contentRect]];

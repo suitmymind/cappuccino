@@ -76,9 +76,9 @@ var CPToolbarConfigurationsByIdentifier = nil;
     Called to obtain a toolbar item. Required.
     @param toolbar the toolbar the item belongs to
     @param itemIdentifier the identifier of the toolbar item
-    @param flag <code>YES</code> means the item will be placed in the toolbar. <code>NO</code> means the item will be displayed for
+    @param flag \c YES means the item will be placed in the toolbar. \c NO means the item will be displayed for
     some other purpose (non-functional)
-    @return the toolbar item or <code>nil</code> if no such item belongs in the toolbar
+    @return the toolbar item or \c nil if no such item belongs in the toolbar
 */
 @implementation CPToolbar : CPObject
 {
@@ -126,6 +126,11 @@ var CPToolbarConfigurationsByIdentifier = nil;
     }
         
     [toolbarsSharingIdentifier addObject:toolbar];
+}
+
+- (id)init
+{
+    return [self initWithIdentifier:@""];
 }
 
 /*!
@@ -176,7 +181,7 @@ var CPToolbarConfigurationsByIdentifier = nil;
 }
 
 /*!
-    Returns <code>YES</code> if the toolbar is currently visible
+    Returns \c YES if the toolbar is currently visible
 */
 - (BOOL)isVisible
 {
@@ -185,7 +190,7 @@ var CPToolbarConfigurationsByIdentifier = nil;
 
 /*!
     Sets whether the toolbar should be visible.
-    @param aFlag <code>YES</code> makes the toolbar visible
+    @param aFlag \c YES makes the toolbar visible
 */
 - (void)setVisible:(BOOL)aFlag
 {
@@ -304,7 +309,7 @@ var CPToolbarConfigurationsByIdentifier = nil;
 }
 
 /*!
-    Returns the toolbar items sorted by their <code>visibilityPriority</code>(ies).
+    Returns the toolbar items sorted by their \c visibilityPriority(ies).
 */
 - (CPArray)itemsSortedByVisibilityPriority
 {
@@ -369,7 +374,7 @@ var CPToolbarIdentifierKey              = "CPToolbarIdentifierKey",
 @implementation CPToolbar (CPCoding)
 
 /*
-    Initializes the toolbar by unarchiving data from <code>aCoder</code>.
+    Initializes the toolbar by unarchiving data from \c aCoder.
     @param aCoder the coder containing the archived CPToolbar.
 */
 - (id)initWithCoder:(CPCoder)aCoder

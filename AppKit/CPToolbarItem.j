@@ -86,6 +86,11 @@ CPToolbarPrintItemIdentifier            = @"CPToolbarPrintItemIdentifier";
     int         _visibilityPriority;
 }
 
+- (id)init
+{
+    return [self initWithItemIdentifier:@""];
+}
+
 // Creating a Toolbar Item
 /*!
     Initializes the toolbar item with a specified identifier.
@@ -223,7 +228,7 @@ CPToolbarPrintItemIdentifier            = @"CPToolbarPrintItemIdentifier";
 }
 
 /*!
-    Sets the target of the action that is triggered when the user clicks this item. <code>nil</code> will cause 
+    Sets the target of the action that is triggered when the user clicks this item. \c nil will cause 
     the action to be passed on to the first responder.
     @param aTarget the new target
 */
@@ -261,7 +266,7 @@ CPToolbarPrintItemIdentifier            = @"CPToolbarPrintItemIdentifier";
 }
 
 /*!
-    Returns <code>YES</code> if the item is enabled.
+    Returns \c YES if the item is enabled.
 */
 - (BOOL)isEnabled
 {
@@ -273,7 +278,7 @@ CPToolbarPrintItemIdentifier            = @"CPToolbarPrintItemIdentifier";
 
 /*!
     Sets whether the item is enabled.
-    @param aFlag <code>YES</code> enables the item
+    @param aFlag \c YES enables the item
 */
 - (void)setEnabled:(BOOL)shouldBeEnabled
 {

@@ -90,15 +90,20 @@ function CPImageInBundle(aFilename, aSize, aBundle)
     Image       _image;
 }
 
+- (id)init
+{
+    return [self initByReferencingFile:@"" size:CGSizeMake(-1, -1)];
+}
+
 /*!
     Initializes the image, by associating it with a filename. The image
-    denoted in <code>aFilename</code> is not actually loaded. It will
+    denoted in \c aFilename is not actually loaded. It will
     be loaded once needed.
     @param aFilename the file containing the image
     @param aSize the image's size
     @return the initialized image
 */
-- (CPImage)initByReferencingFile:(CPString)aFilename size:(CGSize)aSize
+- (id)initByReferencingFile:(CPString)aFilename size:(CGSize)aSize
 {
     self = [super init];
     
@@ -118,7 +123,7 @@ function CPImageInBundle(aFilename, aSize, aBundle)
     @param aSize the size of the image
     @return the initialized image.
 */
-- (CPImage)initWithContentsOfFile:(CPString)aFilename size:(CGSize)aSize
+- (id)initWithContentsOfFile:(CPString)aFilename size:(CGSize)aSize
 {
     self = [self initByReferencingFile:aFilename size:aSize];
     
@@ -134,9 +139,9 @@ function CPImageInBundle(aFilename, aSize, aBundle)
     @param aFilename the file name of the image
     @return the initialized image
 */
-- (CPImage)initWithContentsOfFile:(CPString)aFilename
+- (id)initWithContentsOfFile:(CPString)aFilename
 {
-    self = [self initByReferencingFile:aFilename size: CGSizeMake(-1, -1)];
+    self = [self initByReferencingFile:aFilename size:CGSizeMake(-1, -1)];
     
     if (self)
         [self load];
@@ -187,9 +192,9 @@ function CPImageInBundle(aFilename, aSize, aBundle)
 }
 
 /*!
-    Returns <code>YES</code> if the image data has already been loaded.
+    Returns the load status, which will be CPImageLoadStatusCompleted if the image data has already been loaded.
 */
-- (BOOL)loadStatus
+- (unsigned)loadStatus
 {
     return _loadStatus;
 }
