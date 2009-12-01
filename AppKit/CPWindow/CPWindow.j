@@ -257,6 +257,7 @@ var CPWindowSaveImage       = nil,
     BOOL                                _hasShadow;
     BOOL                                _isMovableByWindowBackground;
     unsigned                            _shadowStyle;
+    BOOL                                _showsResizeIndicator;
 
     BOOL                                _isDocumentEdited;
     BOOL                                _isDocumentSaving;
@@ -421,6 +422,8 @@ CPTexturedBackgroundWindowMask
 
         _defaultButtonEnabled = YES;
         _keyViewLoopIsDirty = YES;
+
+        [self setShowsResizeIndicator:_styleMask & CPResizableWindowMask];
     }
     
     return self;
@@ -501,6 +504,7 @@ CPTexturedBackgroundWindowMask
         [_windowView addSubview:_contentView];
         [_windowView setTitle:_title];
         [_windowView noteToolbarChanged];
+        [_windowView setShowsResizeIndicator:[self showsResizeIndicator]];
 
         [self setFrame:[self frameRectForContentRect:contentRect]];
     }
@@ -606,6 +610,30 @@ CPTexturedBackgroundWindowMask
 */
 - (void)setFrame:(CGRect)aFrame display:(BOOL)shouldDisplay animate:(BOOL)shouldAnimate
 {
+    var value = aFrame.origin.x,
+        delta = value - FLOOR(value);
+
+    if (delta)
+        aFrame.origin.x = value > 0.879 ? CEIL(value) : FLOOR(value);
+
+    value = aFrame.origin.y;
+    delta = value - FLOOR(value);
+
+    if (delta)
+        aFrame.origin.y = value > 0.879 ? CEIL(value) : FLOOR(value);
+
+    value = aFrame.size.width;
+    delta = value - FLOOR(value);
+
+    if (delta)
+        aFrame.size.width = value > 0.15 ? CEIL(value) : FLOOR(value);
+
+    value = aFrame.size.height;
+    delta = value - FLOOR(value);
+
+    if (delta)
+        aFrame.size.height = value > 0.15 ? CEIL(value) : FLOOR(value);
+
     if (shouldAnimate)
     {
         var animation = [[_CPWindowFrameAnimation alloc] initWithWindow:self targetFrame:aFrame];
@@ -711,6 +739,9 @@ CPTexturedBackgroundWindowMask
 */
 - (void)orderOut:(id)aSender
 {
+    if ([self _sharesChromeWithPlatformWindow])
+        [_platformWindow orderOut:self];
+
     if ([_delegate respondsToSelector:@selector(windowWillClose:)])
         [_delegate windowWillClose:self];
 
@@ -722,9 +753,6 @@ CPTexturedBackgroundWindowMask
 
         CPApp._keyWindow = nil;
     }
-
-    if ([self _sharesChromeWithPlatformWindow])
-        [_platformWindow orderOut:self];
 }
 
 /*!
@@ -770,7 +798,7 @@ CPTexturedBackgroundWindowMask
 */
 - (BOOL)showsResizeIndicator
 {
-    return [_windowView showsResizeIndicator];
+    return _showsResizeIndicator;
 }
 
 /*!
@@ -778,8 +806,14 @@ CPTexturedBackgroundWindowMask
     @param shouldShowResizeIndicator \c YES sets the window to show its resize indicator.
 */
 - (void)setShowsResizeIndicator:(BOOL)shouldShowResizeIndicator
-{       
-    [_windowView setShowsResizeIndicator:shouldShowResizeIndicator];
+{
+    shouldShowResizeIndicator = !!shouldShowResizeIndicator;
+
+    if (_showsResizeIndicator === shouldShowResizeIndicator)
+        return;
+
+    _showsResizeIndicator = shouldShowResizeIndicator;
+    [_windowView setShowsResizeIndicator:[self showsResizeIndicator]];
 }
 
 /*!
@@ -930,21 +964,24 @@ CPTexturedBackgroundWindowMask
     return _hasShadow;
 }
 
-/*!
-    Sets whether the window should have a drop shadow.
-    @param shouldHaveShadow \c YES to have a drop shadow.
-*/
-- (void)setHasShadow:(BOOL)shouldHaveShadow
+- (void)_updateShadow
 {
-    if (_hasShadow === shouldHaveShadow)
-        return;
-
-    _hasShadow = shouldHaveShadow;
-
     if ([self _sharesChromeWithPlatformWindow])
-        return [_platformWindow setHasShadow:shouldHaveShadow];
+    {
+        if (_shadowView)
+        {
+#if PLATFORM(DOM)
+            CPDOMDisplayServerRemoveChild(_DOMElement, _shadowView._DOMElement);
+#endif
+            _shadowView = nil;
+        }
 
-    if (_hasShadow)
+        [_platformWindow setHasShadow:_hasShadow];
+
+        return;
+    }
+
+    if (_hasShadow && !_shadowView)
     {
         var bounds = [_windowView bounds];
         
@@ -978,13 +1015,27 @@ CPTexturedBackgroundWindowMask
         CPDOMDisplayServerInsertBefore(_DOMElement, _shadowView._DOMElement, _windowView._DOMElement);
 #endif
     }
-    else if (_shadowView)
+    else if (!_hasShadow && _shadowView)
     {
 #if PLATFORM(DOM)
         CPDOMDisplayServerRemoveChild(_DOMElement, _shadowView._DOMElement);
 #endif
         _shadowView = nil;
     }
+}
+
+/*!
+    Sets whether the window should have a drop shadow.
+    @param shouldHaveShadow \c YES to have a drop shadow.
+*/
+- (void)setHasShadow:(BOOL)shouldHaveShadow
+{
+    if (_hasShadow === shouldHaveShadow)
+        return;
+
+    _hasShadow = shouldHaveShadow;
+
+    [self _updateShadow];
 }
 
 - (void)setShadowStyle:(unsigned)aStyle
@@ -2285,6 +2336,8 @@ var keyViewComparator = function(a, b, context)
         return;
 
     _sharesChromeWithPlatformWindow = shouldShareFrameWithPlatformWindow;
+
+    [self _updateShadow];
 }
 
 - (BOOL)_sharesChromeWithPlatformWindow

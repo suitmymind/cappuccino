@@ -98,9 +98,20 @@
     return className ? CPClassFromString(className) : Nil;
 }
 
++ (CPString)mostEligibleEnvironmentFromArray:(CPArray)environments
+{
+    return objj_mostEligibleEnvironmentFromArray(environments);
+}
+
 - (CPString)pathForResource:(CPString)aFilename
 {
-    return [self resourcePath] + '/' + aFilename;
+    var actualPath = [self resourcePath] + '/' + aFilename,
+        mappedPath = _URIMap["Resources/" + aFilename];
+
+    if (mappedPath)
+        return mappedPath;
+
+    return actualPath;
 }
 
 - (CPDictionary)infoDictionary
@@ -121,44 +132,50 @@
     self._infoConnection = [CPURLConnection connectionWithRequest:[CPURLRequest requestWithURL:[self bundlePath] + "/Info.plist"] delegate:self];
 }
 
+- (CPArray)supportedEnvironments
+{
+    return [self objectForInfoDictionaryKey:"CPBundleEnvironments"] || ["ObjJ"];
+}
+
+- (CPString)mostEligibleEnvironment
+{
+    return [[self class] mostEligibleEnvironmentFromArray:[self supportedEnvironments]];
+}
+
 - (void)connection:(CPURLConnection)aConnection didReceiveData:(CPString)data
 {
     if (aConnection === self._infoConnection)
     {
         info = CPPropertyListCreateFromData([CPData dataWithString:data]);
 
-        var platform = '/',
-            platforms = [self objectForInfoDictionaryKey:"CPBundlePlatforms"];
+        var environment = [self mostEligibleEnvironment];
 
-        if (platforms)
-        {
-            platform = [platforms firstObjectCommonWithArray:OBJJ_PLATFORMS];
-            platform = platform ? '/' + platform + ".platform/" : '/';
-        }
+        if (!environment)
+            throw "Environment not supported for " + [self bundlePath] + ". Supported environments: " + [self objectForInfoDictionaryKey:"CPBundleEnvironments"] + ".";
 
-        [CPURLConnection connectionWithRequest:[CPURLRequest requestWithURL:[self bundlePath] + platform + [self objectForInfoDictionaryKey:"CPBundleExecutable"]] delegate:self];
+        [CPURLConnection connectionWithRequest:[CPURLRequest requestWithURL:[self bundlePath] + '/' + environment + ".environment/" + [self objectForInfoDictionaryKey:"CPBundleExecutable"]] delegate:self];
     }
     else
     {
         objj_decompile([data string], self);
-        
+
         var context = new objj_context();
-    
+
         if ([_delegate respondsToSelector:@selector(bundleDidFinishLoading:)])
             context.didCompleteCallback = function() { [_delegate bundleDidFinishLoading:self]; };
-    
-        var files = [self objectForInfoDictionaryKey:@"CPBundleReplacedFiles"],
-            count = files.length,
+
+        var files = [[self objectForInfoDictionaryKey:@"CPBundleReplacedFiles"] objectForKey:[self mostEligibleEnvironment]],
+            count = files ? files.length : 0, // Perhaps no files? Be liberal in what you accept...
             bundlePath = [self bundlePath];
-            
+
         while (count--)
         {
             var fileName = files[count];
-            
+
             if (fileName.indexOf(".j") === fileName.length - 2)
                 context.pushFragment(fragment_create_file(bundlePath + '/' + fileName, new objj_bundle(""), YES, NULL));
         }
-        
+
         if (context.fragments.length)
             context.evaluate();
         else

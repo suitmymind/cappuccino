@@ -1,0 +1,115 @@
+/*
+ * Jakefile
+ * Objective-J
+ *
+ * Created by Francisco Tolmasky.
+ * Copyright 2009, 280 North, Inc.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+var FILE = require("file"),
+    OS = require("os");
+
+require("../common.jake");
+
+
+$BUILD_OBJECTIVE_J  = FILE.join($BUILD_CONFIGURATION_DIR, "Objective-J");
+
+Files = new FileList("Runtime/constants.js", "Runtime/utilities.js", "Runtime/json2.js", "Runtime/runtime.js", "Runtime/dictionary.js", "Runtime/plist.js", "Runtime/file.js", "Runtime/exception.js", "Runtime/preprocess.js", "Runtime/evaluate.js", "Runtime/bootstrap.js");
+
+if ($CONFIGURATION === "Debug")
+    Files.include("Runtime/debug.js");
+
+$BUILD_BROWSER_FILE = FILE.join($BUILD_OBJECTIVE_J, "Objective-J.js");
+$BUILD_CJS_FILE     = FILE.join($BUILD_OBJECTIVE_J, "CommonJS.environment", "Objective-J.js");
+
+filedir ($BUILD_BROWSER_FILE, Files, function(aTask)
+{
+    build_product(aTask.name(), environmentFlags("ObjJ") + " -DPLATFORM_USERAGENT");
+});
+
+filedir ($BUILD_CJS_FILE, Files, function(aTask)
+{
+    flags = environmentFlags("CommonJS", "ObjJ");
+    flags += ' -DRHINO'
+
+    build_product(aTask.name(), flags)
+});
+
+$LICENSE        = FILE.join("CommonJS", "lib", "objective-j", "jake", "LICENSES", "LGPL-v2.1");
+$BUILD_LICENSE  = FILE.join($BUILD_OBJECTIVE_J, "LICENSE");
+
+filedir ($BUILD_LICENSE, [$LICENSE], function()
+{
+    FILE.copy($LICENSE, $BUILD_LICENSE);
+});
+
+new FileList("CommonJS/**/*").forEach(function(aFilename)
+{
+    if (!FILE.isFile(aFilename))
+        return;
+
+    var buildFilename = FILE.join($BUILD_CJS_OBJECTIVE_J, FILE.relative("CommonJS/", aFilename));
+
+    filedir (buildFilename, [aFilename], function ()
+    {
+        cp(aFilename, buildFilename);
+    });
+
+    if (FILE.dirname(aFilename) === FILE.join("CommonJS", "bin"))
+    {
+        filedir (buildFilename, function ()
+        {
+            FILE.chmod(buildFilename, 0755);
+        });
+    }
+
+    task ("build", buildFilename);
+    CLOBBER.include(buildFilename);
+});
+
+$BUILD_CJS_OBJECTIVE_J_FRAMEWORK = FILE.join($BUILD_CJS_OBJECTIVE_J, "Frameworks", "Objective-J");
+
+filedir ($BUILD_CJS_OBJECTIVE_J_FRAMEWORK, function()
+{
+    cp_r($BUILD_OBJECTIVE_J, $BUILD_CJS_OBJECTIVE_J_FRAMEWORK);
+});
+
+CLOBBER.include($BUILD_OBJECTIVE_J);
+
+function environmentFlags()
+{
+    return "-DENVIRONMENTS=\"[" + Array.prototype.map.apply(arguments, [function(anEnvironment)
+    {
+        return "\\\"" + anEnvironment + "\\\"";
+    }]).join(", ") + "]\"";
+}
+
+function build_product(path, flags)
+{
+    OS.system("cat Runtime/header.txt > " + OS.enquote(path));
+    OS.system("cat " + 
+    Files.filter(function(aName)
+    {
+        return !!aName.match(/\.js$/);
+    }).map(function(aName)
+    {
+        return OS.enquote(aName);
+    }).join(' ') + " | gcc " + flags + " -E -x c -P - >> " + OS.enquote(path));
+    //    rake abort if ($? != 0)
+}
+
+task ("build", [$BUILD_BROWSER_FILE, $BUILD_CJS_FILE, $BUILD_LICENSE, $BUILD_CJS_OBJECTIVE_J_FRAMEWORK]);
